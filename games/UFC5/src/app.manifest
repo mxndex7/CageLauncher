@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity type="win32" name="PORTHEON.UFC5" version="1.0.0.0" processorArchitecture="amd64"/>
-  <description>PORTHEON - EA SPORTS UFC 5 port</description>
+  <assemblyIdentity type="win32" name="CageLauncher.UFC5" version="1.0.0.0" processorArchitecture="amd64"/>
+  <description>Cage Launcher - EA SPORTS UFC 5 port</description>
   <dependency>
     <dependentAssembly>
       <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"

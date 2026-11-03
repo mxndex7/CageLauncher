@@ -1,6 +1,6 @@
-# PORTHEON 2.7 — Ports & Mods
+# Cage Launcher 2.7
 
-**PORTHEON** é um launcher para jogar no PC os ports de **EA SPORTS UFC 1, 2, 3, 4 (PS4) e UFC 5
+**Cage Launcher** é um launcher para jogar no PC os ports de **EA SPORTS UFC 1, 2, 3, 4 (PS4) e UFC 5
 (PS5)**. Ele acha o jogo, lê o seu PC e escolhe as melhores configurações para cada UFC sozinho.
 
 > **Nenhum arquivo de jogo está incluído.** Você precisa do seu próprio dump de cada jogo.
@@ -15,10 +15,10 @@
 
 | Arquivo | Para quem |
 |---|---|
-| `PORTHEON-2.7-Windows-x64.zip` | Windows 10 (1903+) e 11, 64 bits. Inclui o modo Intel Arc. |
-| `PORTHEON-2.7-Linux-x64.tar.gz` | Linux e Steam Deck, pelo Wine ou pelo Proton. É o mesmo pacote com o `portheon.sh`. |
+| `CageLauncher-2.7-Windows-x64.zip` | Windows 10 (1903+) e 11, 64 bits. Inclui o modo Intel Arc. |
+| `CageLauncher-2.7-Linux-x64.tar.gz` | Linux e Steam Deck, pelo Wine ou pelo Proton. É o mesmo pacote com o `cage.sh`. |
 
-**Placas Intel Arc:** não precisa de download separado. O PORTHEON reconhece a placa Arc e liga o
+**Placas Intel Arc:** não precisa de download separado. O Cage Launcher reconhece a placa Arc e liga o
 modo Intel Arc sozinho (veja [Intel Arc](#intel-arc)).
 
 ## Jogos
@@ -34,10 +34,10 @@ modo Intel Arc sozinho (veja [Intel Arc](#intel-arc)).
 Os jogos de PS4 precisam do `eboot.bin` descriptografado e da pasta do update ao lado do jogo base,
 ou já juntos. O launcher de cada port explica o que estiver faltando.
 
-## O que o PORTHEON faz sozinho
+## O que o Cage Launcher faz sozinho
 
 Na primeira vez que abre, e de novo quando o PC muda (outra placa de vídeo, mais RAM, outro
-monitor), o PORTHEON lê o seu PC:
+monitor), o Cage Launcher lê o seu PC:
 - a placa de vídeo pelo Vulkan (fabricante, memória e Resizable BAR);
 - os threads do processador;
 - a RAM;
@@ -62,7 +62,7 @@ Se você já tinha configurado um jogo à mão, ele fica como está. Para refaze
 
 ### Intel Arc
 
-O PORTHEON detecta Intel Arc (A e B) e aplica:
+O Cage Launcher detecta Intel Arc (A e B) e aplica:
 - **Aviso de Resizable BAR:** se o ReBAR estiver desligado, aparece um aviso para ligar
   "Re-Size BAR" e "Above 4G Decoding" na BIOS. O Arc perde muito desempenho sem ele.
 - **UFC 1 a 4:** apresentação VSync (Fifo), o modo que o driver da Intel sempre suporta, e modo PS4
@@ -76,7 +76,7 @@ Também ajuda usar o driver Intel mais recente.
 - **Limite de FPS 60, 120 ou 144** (experimental). Os menus passam de 60. Se o relógio do round
   correr rápido, volte para 60.
 - **Geração de quadros com o Lossless Scaling** (Steam, pago e separado): 120/144 FPS na tela. O
-  PORTHEON abre o Lossless Scaling e aperta Ctrl+Alt+S sozinho.
+  Cage Launcher abre o Lossless Scaling e aperta Ctrl+Alt+S sozinho.
 - **Calibração automática:** 12 lutas, 6 ajustes do motor, e fica com o que der mais FPS.
 - **Diagnóstico completo** de uma partida, e FPS na tela (F10).
 
@@ -85,8 +85,8 @@ RTX 4060, a luta fica perto de 30 FPS. Detalhes em `games/UFC5/LEIA-ME.txt`.
 
 ## Como usar — Windows
 
-1. Extraia o `.zip` numa pasta fora do OneDrive, por exemplo `C:\Jogos\PORTHEON`.
-2. Abra o `PORTHEON.exe`.
+1. Extraia o `.zip` numa pasta fora do OneDrive, por exemplo `C:\Jogos\CageLauncher`.
+2. Abra o `CageLauncher.exe`.
 3. Escolha o jogo na esquerda e, em **Procurar**, a pasta do dump. Aperte **JOGAR**.
 
 Requisitos:
@@ -98,22 +98,22 @@ Requisitos:
 Saves, configurações e logs:
 - UFC 1–4: `%LOCALAPPDATA%\UFC<n>Native`;
 - UFC 5: `games\UFC5\bin`;
-- PORTHEON: `%LOCALAPPDATA%\PORTHEON\portheon.ini`.
+- Cage Launcher: `%LOCALAPPDATA%\CageLauncher\cage.ini`.
 
 ## Como usar — Linux e Steam Deck
 
 ```bash
-tar xf PORTHEON-2.7-Linux-x64.tar.gz
-cd PORTHEON-2.7
-bash portheon.sh             # abre o PORTHEON
-bash portheon.sh --install   # coloca o PORTHEON no menu de aplicativos
+tar xf CageLauncher-2.7-Linux-x64.tar.gz
+cd CageLauncher-2.7
+bash cage.sh             # abre o Cage Launcher
+bash cage.sh --install   # coloca o Cage Launcher no menu de aplicativos
 ```
 
-- O `portheon.sh` usa o **umu-launcher (Proton)** se ele estiver instalado. Se não, usa o **Wine 9
-  ou mais novo**. O prefixo fica em `~/.local/share/PORTHEON/prefix`.
-- As pastas do Linux aparecem no PORTHEON como o disco **Z:**, por exemplo
+- O `cage.sh` usa o **umu-launcher (Proton)** se ele estiver instalado. Se não, usa o **Wine 9
+  ou mais novo**. O prefixo fica em `~/.local/share/CageLauncher/prefix`.
+- As pastas do Linux aparecem no Cage Launcher como o disco **Z:**, por exemplo
   `Z:\home\voce\Jogos\UFC 4`.
-- **Steam Deck:** em Modo Desktop, adicione o `PORTHEON.exe` como jogo de fora da Steam. Em
+- **Steam Deck:** em Modo Desktop, adicione o `CageLauncher.exe` como jogo de fora da Steam. Em
   Propriedades > Compatibilidade, escolha GE-Proton ou Proton Experimental. Depois jogue no Modo
   de Jogo.
 - **UFC 3 nativo para Linux:** o projeto original do GNSB tem um build Linux de verdade (sem Wine):
@@ -134,11 +134,11 @@ bash portheon.sh --install   # coloca o PORTHEON no menu de aplicativos
 - **FPS caindo para 1–3 no UFC 5:** falta memória virtual. Use 16 GB de RAM e um arquivo de
   paginação de 16 a 32 GB.
 - **Intel Arc lento:** ligue o Resizable BAR na BIOS.
-- **Logs:** use o botão **Logs** no PORTHEON e mande o mais novo junto com o relatório.
+- **Logs:** use o botão **Logs** no Cage Launcher e mande o mais novo junto com o relatório.
 
 ## Código-fonte e licenças
 
-- `PORTHEON.exe` (`src/`) e o launcher do UFC 5 (`games/UFC5/src/`) estão em C/Win32, sob
+- `CageLauncher.exe` (`src/`) e o launcher do UFC 5 (`games/UFC5/src/`) estão em C/Win32, sob
   GPL-2.0-or-later. Para compilar, rode o `build.sh` com o llvm-mingw.
 - Os ports do UFC 1–4 são GPL-2.0-or-later. Eles se baseiam em:
   - [SacredFire](https://github.com/T3CHNOLOG1C/SacredFire);
@@ -151,7 +151,7 @@ bash portheon.sh --install   # coloca o PORTHEON no menu de aplicativos
   de código-fonte do autor está em `games/UFC5/bin/README-motor-KytyPS5.txt`.
 - Patches da comunidade (todos vêm desligados): Lepexa e Antigravity. Correções de AMD e modo Pro:
   @luscamovi. Cabelo e pele: mancelli.
-- Lossless Scaling é um produto da THS na Steam. O PORTHEON só abre o programa e aperta o atalho
+- Lossless Scaling é um produto da THS na Steam. O Cage Launcher só abre o programa e aperta o atalho
   dele; ele não vem incluído.
 
 EA SPORTS UFC, PlayStation e as marcas relacionadas pertencem aos seus donos. Elas aparecem aqui
@@ -161,10 +161,10 @@ só para identificar os jogos.
 
 ## English
 
-**PORTHEON** is a launcher for the PC ports of **EA SPORTS UFC 1, 2, 3, 4 (PS4) and UFC 5 (PS5)**.
+**Cage Launcher** is a launcher for the PC ports of **EA SPORTS UFC 1, 2, 3, 4 (PS4) and UFC 5 (PS5)**.
 No game files are included: you need your own dump of each game.
 
-- **Best settings for every PC:** on the first start, and whenever the hardware changes, PORTHEON
+- **Best settings for every PC:** on the first start, and whenever the hardware changes, Cage Launcher
   reads the GPU (through Vulkan), CPU threads, RAM and monitor. It then picks resolution, FPS cap,
   present mode, PS4 Pro mode and FSR for UFC 1–4, and the UFC 5 profile. Games you already set up by
   hand are left alone. To redo it: *Advanced settings > Best settings for this PC*.
@@ -179,13 +179,13 @@ No game files are included: you need your own dump of each game.
   - fullscreen at the monitor's resolution;
   - automatic calibration and a one-session full diagnostic.
   The fight is CPU-bound in the emulator: about 30 FPS on a Ryzen 5 5500.
-- **Windows:** extract the zip, run `PORTHEON.exe`, pick a game, Browse to your dump, PLAY.
-- **Linux / Steam Deck:** run `bash portheon.sh`. It uses umu-launcher (Proton) if installed,
+- **Windows:** extract the zip, run `CageLauncher.exe`, pick a game, Browse to your dump, PLAY.
+- **Linux / Steam Deck:** run `bash cage.sh`. It uses umu-launcher (Proton) if installed,
   otherwise Wine 9 or newer.
   - Linux folders show up as drive Z:.
   - UFC 1–4 should work under Proton, but this is untested with the games.
   - UFC 5 under Wine is experimental: the emulator needs Windows memory APIs that Wine 9 lacks.
   - For a native UFC 3 build, see GNSB's repository.
 
-Licenses: GPL-2.0-or-later (PORTHEON, the UFC 1–4 ports), GPL-2.0 (KytyPS5). Third-party licenses
+Licenses: GPL-2.0-or-later (Cage Launcher, the UFC 1–4 ports), GPL-2.0 (KytyPS5). Third-party licenses
 are in each `licenses` folder.

@@ -13,12 +13,12 @@ BEGIN
   BEGIN
     BLOCK "041604B0"
     BEGIN
-      VALUE "CompanyName", "PORTHEON"
-      VALUE "FileDescription", "PORTHEON - Ports & Mods: launcher dos ports para PC do UFC 1, 2, 3, 4 e 5"
+      VALUE "CompanyName", "Cage Launcher"
+      VALUE "FileDescription", "Cage Launcher: launcher dos ports para PC do UFC 1, 2, 3, 4 e 5"
       VALUE "FileVersion", "2.7.0"
-      VALUE "ProductName", "PORTHEON"
+      VALUE "ProductName", "Cage Launcher"
       VALUE "ProductVersion", "2.7.0"
-      VALUE "OriginalFilename", "PORTHEON.exe"
+      VALUE "OriginalFilename", "CageLauncher.exe"
       VALUE "LegalCopyright", "GPL-2.0-or-later. Sem afiliacao com a Electronic Arts, o UFC ou a Sony."
     END
   END

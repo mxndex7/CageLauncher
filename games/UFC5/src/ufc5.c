@@ -1,8 +1,8 @@
 /*
- * PORTHEON - UFC 5 port
+ * Cage Launcher - UFC 5 port
  * Starts EA SPORTS UFC 5 (PS5, PPSA03541) through the bundled KytyPS5 (UFC 5 build) emulator with
  * performance-oriented settings. All of the emulator's command-line options are exposed here.
- * Win32, no dependencies beyond Windows itself. GPL-2.0-or-later, like PORTHEON.
+ * Win32, no dependencies beyond Windows itself. GPL-2.0-or-later, like Cage Launcher.
  */
 #ifndef UNICODE
 #define UNICODE
@@ -32,7 +32,7 @@
 #include <stdint.h>
 #include <ntsecapi.h>
 
-#define APP_TITLE L"PORTHEON — EA SPORTS UFC 5"
+#define APP_TITLE L"CAGE LAUNCHER — EA SPORTS UFC 5"
 #define TITLE_ID L"PPSA03541"
 #define WM_APP_EXITED (WM_APP + 1)
 #define ENGINE_EXE L"UFC5-Game.exe"
@@ -92,7 +92,7 @@ typedef struct {
 } Settings;
 
 static Settings S;
-static BOOL g_headless; static DWORD g_exitCode;   /* --headless: started by PORTHEON, no window of its own, no overlay */
+static BOOL g_headless; static DWORD g_exitCode;   /* --headless: started by Cage Launcher, no window of its own, no overlay */
 static HINSTANCE g_inst;
 static HWND g_wnd, g_tip, g_status;
 static HFONT g_font, g_fontBold, g_fontTitle, g_fontPlay;
@@ -480,7 +480,7 @@ static void AutoConfig(BOOL announce)
     }
 }
 
-/* hardware signature: when it changes (new video card, more RAM, other PC), PORTHEON configures UFC 5 again */
+/* hardware signature: when it changes (new video card, more RAM, other PC), Cage Launcher configures UFC 5 again */
 static void HwSig(wchar_t *out, int n)
 {
     wchar_t cpu[64]; CpuName(cpu, 64); int bg = BestGpu();
@@ -490,7 +490,7 @@ static void HwSig(wchar_t *out, int n)
     out[n - 1] = 0;
 }
 
-/* --auto-config [--force]: called by PORTHEON when it opens. No window. Exit code 0 = already set for this PC,
+/* --auto-config [--force]: called by Cage Launcher when it opens. No window. Exit code 0 = already set for this PC,
    1 = configured now (summary in auto_summary), 2 = the UFC 5 launcher is open (nothing touched). */
 static BOOL SameSig(const wchar_t *a, const wchar_t *b)   /* spaces do not count (older versions kept the CPU name's padding) */
 {
@@ -498,7 +498,7 @@ static BOOL SameSig(const wchar_t *a, const wchar_t *b)   /* spaces do not count
 }
 static int HeadlessAutoConfig(BOOL force)
 {
-    HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, L"PORTHEON_UFC5_Launcher");
+    HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, L"CAGE_LAUNCHER_UFC5");
     if (m) { CloseHandle(m); return 2; }
     LoadSettings(); DetectGpus(); FindDefaults();
     if (S.gpu >= g_ngpus) S.gpu = -1;
@@ -567,7 +567,7 @@ static void BuildHeader(void)
     TextOutW(dc, tx, SC(16), L"EA SPORTS UFC 5", 15);
     SelectObject(dc, g_font); SetTextColor(dc, RGB(205, 205, 212));
     wchar_t sub[256];
-    _snwprintf(sub, 256, L"%s  ·  versão %s  ·  Port para PC  ·  PORTHEON", TITLE_ID, g_gameVer[0] ? g_gameVer : L"?");
+    _snwprintf(sub, 256, L"%s  ·  versão %s  ·  Port para PC  ·  CAGE LAUNCHER", TITLE_ID, g_gameVer[0] ? g_gameVer : L"?");
     TextOutW(dc, tx, SC(56), sub, (int)wcslen(sub));
     SetTextColor(dc, RGB(160, 160, 170));
     const wchar_t *keys = L"Teclado:  J/L/I/K = X/O/\u25B3/\u25A1  ·  WASD analógico  ·  setas d-pad  ·  Q/E L1/R1  ·  Z/C L2/R2  ·  Enter Options";
@@ -1219,7 +1219,7 @@ static void OnExitedUi(DWORD code);
 static void OnExited(DWORD code)
 {
     OnExitedUi(code);
-    if (g_headless) { g_exitCode = code; DestroyWindow(g_wnd); }   /* PORTHEON shows the result (last_session / calib_status) */
+    if (g_headless) { g_exitCode = code; DestroyWindow(g_wnd); }   /* Cage Launcher shows the result (last_session / calib_status) */
 }
 static void OnExitedUi(DWORD code)
 {
@@ -1261,7 +1261,7 @@ static void OnExitedUi(DWORD code)
             if (l != INVALID_HANDLE_VALUE) { char b8[1300]; int m = WideCharToMultiByte(CP_UTF8, 0, perf, -1, b8 + 10, 1280, NULL, NULL); memcpy(b8, "\r\n> PERF: ", 10);
                 DWORD wr; if (m > 1) WriteFile(l, b8, 10 + m - 1, &wr, NULL); CloseHandle(l); } }
     }
-    if (g_runDiagFull) {   /* say where the diagnostic went, also for PORTHEON (it shows last_session) */
+    if (g_runDiagFull) {   /* say where the diagnostic went, also for Cage Launcher (it shows last_session) */
         wchar_t d[400]; _snwprintf(d, 400, L"%s%sDiagnóstico completo salvo: %s e %s (pasta bin\\_Logs). %s", fps, fps[0] ? L". " : L"",
                                     PathFindFileNameW(g_lastLog), diagFile ? PathFindFileNameW(g_motorLog) : L"(o motor não gravou o log dele)", perf);
         d[399] = 0; PutStr(L"last_session", d);
@@ -1291,7 +1291,7 @@ static BOOL MakeShortcut(BOOL quiet)
     IShellLinkW *sl = NULL; IPersistFile *pf = NULL; BOOL ok = FALSE;
     if (SUCCEEDED(CoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&sl))) {
         sl->lpVtbl->SetPath(sl, exe); sl->lpVtbl->SetArguments(sl, L"--play"); sl->lpVtbl->SetWorkingDirectory(sl, g_exeDir);
-        sl->lpVtbl->SetIconLocation(sl, exe, 0); sl->lpVtbl->SetDescription(sl, L"EA SPORTS UFC 5 - PORTHEON");
+        sl->lpVtbl->SetIconLocation(sl, exe, 0); sl->lpVtbl->SetDescription(sl, L"EA SPORTS UFC 5 - Cage Launcher");
         if (SUCCEEDED(sl->lpVtbl->QueryInterface(sl, &IID_IPersistFile, (void **)&pf))) { ok = SUCCEEDED(pf->lpVtbl->Save(pf, lnk, TRUE)); pf->lpVtbl->Release(pf); }
         sl->lpVtbl->Release(sl);
     }
@@ -1435,7 +1435,7 @@ static void OverlayUpdate(void)
     BOOL want = !g_headless && S.overlay && !g_ovHidden && g_proc && g_gameWnd && IsWindow(g_gameWnd) && !IsIconic(g_gameWnd);
     if (!want) { if (g_ov) ShowWindow(g_ov, SW_HIDE); return; }
     if (!g_ov) {
-        WNDCLASSW wc = {0}; wc.lpfnWndProc = OverlayProc; wc.hInstance = g_inst; wc.lpszClassName = L"PORTHEON_UFC5_FPS"; RegisterClassW(&wc);
+        WNDCLASSW wc = {0}; wc.lpfnWndProc = OverlayProc; wc.hInstance = g_inst; wc.lpszClassName = L"CageLauncherUFC5Fps"; RegisterClassW(&wc);
         g_ovBig = CreateFontW(-SC(24), 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, ANTIALIASED_QUALITY, 0, L"Bahnschrift");
         g_ovSmall = CreateFontW(-SC(12), 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, ANTIALIASED_QUALITY, 0, L"Segoe UI");
         g_ov = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, wc.lpszClassName, L"", WS_POPUP,
@@ -1679,8 +1679,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
         return HeadlessAutoConfig(wcsstr(cmdline, L"--force") != NULL);
     }
     g_headless = cmdline && wcsstr(cmdline, L"--headless") != NULL;
-    HANDLE single = CreateMutexW(NULL, TRUE, L"PORTHEON_UFC5_Launcher");
-    if (GetLastError() == ERROR_ALREADY_EXISTS) { HWND o = FindWindowW(L"PORTHEON_UFC5", NULL); if (o && !g_headless) { ShowWindow(o, SW_RESTORE); SetForegroundWindow(o); } return 0; }
+    HANDLE single = CreateMutexW(NULL, TRUE, L"CAGE_LAUNCHER_UFC5");
+    if (GetLastError() == ERROR_ALREADY_EXISTS) { HWND o = FindWindowW(L"CageLauncherUFC5", NULL); if (o && !g_headless) { ShowWindow(o, SW_RESTORE); SetForegroundWindow(o); } return 0; }
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     INITCOMMONCONTROLSEX ic = {sizeof(ic), ICC_STANDARD_CLASSES | ICC_WIN95_CLASSES}; InitCommonControlsEx(&ic);
     GdiplusStartupInput gi = {1, NULL, FALSE, FALSE}; GdiplusStartup(&g_gdip, &gi, NULL);
@@ -1715,7 +1715,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     if (first) AutoConfig(FALSE);
     { wchar_t sig[400]; HwSig(sig, 400); PutStr(L"hw_sig", sig); }
 
-    WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"PORTHEON_UFC5";
+    WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"CageLauncherUFC5";
     wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW); wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1)); wc.hbrBackground = g_brBg;
     RegisterClassExW(&wc);
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
@@ -1737,14 +1737,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     if (!S.game[0]) SetStatus(C_BAD, L"Não achei o UFC 5 na área de trabalho. Clique em Procurar... e escolha a pasta do dump.");
     else if (!S.emu[0]) SetStatus(C_BAD, L"Não achei o motor do jogo (bin\\UFC5-Game.exe). Clique em Procurar... ao lado de Motor do jogo.");
 
-    /* --play: start straight away (for shortcuts / PORTHEON) */
+    /* --play: start straight away (for shortcuts / Cage Launcher) */
     BOOL autoplay = cmdline && wcsstr(cmdline, L"--play");
     if (g_headless) {
         AllowSetForegroundWindow(ASFW_ANY);
         Play();
-        if (!g_proc) {   /* it could not start: say why, PORTHEON shows the code */
+        if (!g_proc) {   /* it could not start: say why, Cage Launcher shows the code */
             wchar_t t[1024]; GetWindowTextW(g_status, t, 1024);
-            MessageBoxW(NULL, t[0] ? t : L"Não foi possível iniciar o UFC 5.", L"PORTHEON — EA SPORTS UFC 5", MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
+            MessageBoxW(NULL, t[0] ? t : L"Não foi possível iniciar o UFC 5.", APP_TITLE, MB_OK | MB_ICONWARNING | MB_SETFOREGROUND);
             return 3;
         }
     } else {

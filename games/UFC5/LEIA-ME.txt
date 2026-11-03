@@ -1,9 +1,9 @@
-PORTHEON - EA SPORTS UFC 5 (PS5, PPSA03541) - port para PC v1.8.1
-==================================================================
+CAGE LAUNCHER - EA SPORTS UFC 5 (PS5, PPSA03541) - port para PC v1.8.1
+=======================================================================
 
 O que é
 -------
-O UFC 5 empacotado como um jogo de PC do PORTHEON. O motor fica em bin\UFC5-Game.exe (KytyPS5,
+O UFC 5 empacotado como um jogo de PC do Cage Launcher. O motor fica em bin\UFC5-Game.exe (KytyPS5,
 build ajustado para o UFC 5): o código do jogo roda no seu processador e o vídeo do PS5 é
 traduzido para Vulkan. O launcher acha o jogo sozinho, lê o seu PC e liga as opções de mais FPS.
 
@@ -11,7 +11,7 @@ Não contém arquivos do jogo: você precisa do seu próprio dump do UFC 5.
 
 Novo na 1.8
 -----------
-- Limite de FPS 60, 120 ou 144 ("Limite de FPS" no PORTHEON, "FPS máximo (vblank)" aqui).
+- Limite de FPS 60, 120 ou 144 ("Limite de FPS" no Cage Launcher, "FPS máximo (vblank)" aqui).
 - Geração de quadros com o Lossless Scaling: 120/144 FPS na tela.
 - Tela cheia sempre na resolução do monitor. Antes, com 1280x720, a imagem ficava pequena no meio
   da tela. A resolução não muda o FPS neste motor: o jogo renderiza por dentro do mesmo jeito.
@@ -44,7 +44,7 @@ Como ter 120/144 FPS na tela (Lossless Scaling, da Steam)
    - Scaling type: pode ficar Off;
    - Auto Scale: desligado.
    Se a imagem oscilar, teste Mode Fixed com X4.
-2. No PORTHEON (UFC 5), escolha Geração de quadros: "Lossless (liga sozinho)". Se quiser, coloque
+2. No Cage Launcher (UFC 5), escolha Geração de quadros: "Lossless (liga sozinho)". Se quiser, coloque
    também o Limite de FPS em 120 ou 144.
 3. Aperte JOGAR. O port abre o Lossless Scaling minimizado antes do jogo. Uns 8 segundos depois
    que o jogo aparece, ele aperta Ctrl+Alt+S. Ctrl+Alt+S de novo desliga.
@@ -54,14 +54,14 @@ Ajustes e problemas:
   ls_hotkey=Alt+F10. Para mudar a espera, use ls_delay=8 (em segundos).
 - Se você já tem um perfil do UFC5-Game.exe com Auto Scale no Lossless Scaling, escolha "Lossless
   (só abrir)".
-- Se o Lossless Scaling roda como administrador, abra o PORTHEON como administrador também. Senão
+- Se o Lossless Scaling roda como administrador, abra o Cage Launcher como administrador também. Senão
   o Windows bloqueia o atalho.
 - O "FPS na tela" do port mostra o FPS real do motor. O contador do Lossless Scaling (Draw FPS)
   mostra os dois, por exemplo 30/144.
 
 Diagnóstico completo (1 partida)
 --------------------------------
-Para ligar, use PORTHEON > Configurações avançadas > "Diagnóstico completo na próxima partida",
+Para ligar, use Cage Launcher > Configurações avançadas > "Diagnóstico completo na próxima partida",
 ou a caixa de mesmo nome aqui no UFC5.exe.
 
 Na próxima partida, o motor grava o próprio log (bin\_Logs\UFC5_..._motor.txt). Esse log mostra
@@ -74,7 +74,7 @@ desliga sozinho.
 
 Como jogar
 ----------
-1. Abra o PORTHEON.exe, escolha UFC 5 e aperte JOGAR. Ou abra o UFC5.exe (nesta pasta). Na
+1. Abra o CageLauncher.exe, escolha UFC 5 e aperte JOGAR. Ou abra o UFC5.exe (nesta pasta). Na
    primeira vez ele cria o atalho "EA SPORTS UFC 5" na área de trabalho, que entra direto no jogo.
 2. Na primeira vez ele procura o jogo em Área de Trabalho\UFC 5 e acha lá dentro a pasta do dump
    (a que tem eboot.bin, sce_sys e Data). Se não achar, use "Procurar...".
@@ -139,7 +139,7 @@ Problemas
 - Travou carregando: teste o "PlayGo hack".
 - Com 120/144 o round fica acelerado: volte o Limite de FPS para 60.
 
-Código-fonte: src\ (launcher em C/Win32, GPL-2.0-or-later, como o PORTHEON).
+Código-fonte: src\ (launcher em C/Win32, GPL-2.0-or-later, como o Cage Launcher).
 Motor: KytyPS5, GPL-2.0 (bin\LICENSE-GPL-2.0.txt, bin\README-motor-KytyPS5.txt).
 Lossless Scaling é um programa pago e separado, da Steam. O port só o abre e aperta o atalho dele.
 Não é afiliado à Electronic Arts, ao UFC nem à Sony. Você precisa da sua própria cópia do jogo.

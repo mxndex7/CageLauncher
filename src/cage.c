@@ -1,7 +1,7 @@
 /*
- * PORTHEON 2.7 - Ports & Mods
- * One launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5, with the look of
- * PORTHEON 1.x (logo, circuit background, game cards, VIDEO / GAMEPLAY options, gradient PLAY).
+ * CAGE LAUNCHER 2.7
+ * One launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5.
+ * Game list on the left, GAME / VIDEO / GAMEPLAY options and PLAY on the right.
  *  - UFC 1-4: options are written to %LOCALAPPDATA%\UFCnNative\sacredfire.ini (the ports' own file),
  *    the port is started as games\UFCn\UFCn.exe --play.
  *  - UFC 5: options are written to games\UFC5\UFC5.ini, the port is started as UFC5.exe --play.
@@ -70,7 +70,7 @@ int WINAPI GdipDrawLineI(GpGraphics *, GpPen *, INT, INT, INT, INT);
 int WINAPI GdipDeleteGraphics(GpGraphics *);
 int WINAPI GdipDisposeImage(GpImage *);
 
-/* ---------------------------------------------------------------- look (PORTHEON 1.x) */
+/* ---------------------------------------------------------------- look */
 #define A(c, a) (((UINT32)(a) << 24) | ((UINT32)GetRValue(c) << 16) | ((UINT32)GetGValue(c) << 8) | (UINT32)GetBValue(c))
 #define C_BG      RGB(6, 8, 16)
 #define C_SIDE    RGB(5, 6, 12)
@@ -216,7 +216,7 @@ static void Msg(COLORREF c, const wchar_t *fmt, ...)
 static void PortDir(int g, wchar_t *out)
 {
     wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g].id);
-    GetPrivateProfileStringW(L"PORTHEON", k, L"", out, MAX_PATH, g_pIni);
+    GetPrivateProfileStringW(L"CAGE", k, L"", out, MAX_PATH, g_pIni);
     if (out[0] && DirExists(out)) return;
     wchar_t t[MAX_PATH]; Join(t, g_exeDir, L"games"); Join(out, t, G[g].id);
 }
@@ -451,7 +451,7 @@ static void Button(HDC dc, GpGraphics *g, RECT r, const wchar_t *t, int id)
 static void PlayButton(HDC dc, GpGraphics *g, RECT r)
 {
     BOOL hot = g_hot == H_PLAY, can = Status(g_sel) == S_READY || g_proc;
-    int cut = SC(18);   /* slanted corners, like PORTHEON 1.x */
+    int cut = SC(18);   /* slanted corners */
     GpPath *p = NULL; GdipCreatePath(0, &p);
     GdipAddPathLineI(p, r.left + cut, r.top, r.right, r.top); GdipAddPathLineI(p, r.right, r.top, r.right, r.bottom - cut);
     GdipAddPathLineI(p, r.right, r.bottom - cut, r.right - cut, r.bottom); GdipAddPathLineI(p, r.right - cut, r.bottom, r.left, r.bottom);
@@ -573,7 +573,7 @@ static void Select(int g)
 {
     if (g < 0 || g >= NGAMES || g == g_sel) return;
     SaveEdits(); g_sel = g; g_kvGame = -1; g_msg[0] = 0;
-    WritePrivateProfileStringW(L"PORTHEON", L"selected_game", G[g].id, g_pIni);
+    WritePrivateProfileStringW(L"CAGE", L"selected_game", G[g].id, g_pIni);
     LoadEdits();
     if (G[g].ps5) { wchar_t last[400]; GetStr(4, GetInt(4, L"calibrate", 0) ? L"calib_status" : L"last_session", last, 400, L"");
                     if (last[0]) Msg(C_SUB, GetInt(4, L"calibrate", 0) ? L"%s" : T(S_SESSION), last); }
@@ -608,7 +608,7 @@ static void ChangePort(void)
     if (!PickFolder(p, t)) return;
     wchar_t e[MAX_PATH]; Join(e, p, G[g_sel].exe);
     if (!FileExists(e)) { Msg(C_BAD, T(S_NOTFOUND), G[g_sel].exe); return; }
-    wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); WritePrivateProfileStringW(L"PORTHEON", k, p, g_pIni);
+    wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); WritePrivateProfileStringW(L"CAGE", k, p, g_pIni);
     ReadVersion(g_sel); g_kvGame = -1; LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);
 }
 
@@ -687,7 +687,7 @@ static BOOL SaveStacks(DWORD pid, const wchar_t *path, const char *why)
     qsort(mods, nm, sizeof(ModInfo), ModCmp);
     FILE *f = _wfopen(path, L"wb"); if (!f) { CloseHandle(hp); return FALSE; }
     SYSTEMTIME t; GetLocalTime(&t);
-    Out(f, L"PORTHEON %s freeze catcher, %04d-%02d-%02d %02d:%02d:%02d: the threads of sacredfire-game.exe (pid %lu)\r\n", APP_VER, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, pid);
+    Out(f, L"Cage Launcher %s freeze catcher, %04d-%02d-%02d %02d:%02d:%02d: the threads of sacredfire-game.exe (pid %lu)\r\n", APP_VER, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, pid);
     { wchar_t w[300]; MultiByteToWideChar(CP_UTF8, 0, why, -1, w, 300); w[299] = 0; Out(f, L"Trigger: %s\r\n\r\nModules:\r\n", w); }
     for (int i = 0; i < nm; i++) Out(f, L"  %016llx %08llx %s\r\n", (unsigned long long)mods[i].base, (unsigned long long)mods[i].size, mods[i].name);
     GetThreadDescriptionFn gtd = (GetThreadDescriptionFn)(void *)GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetThreadDescription");
@@ -800,7 +800,7 @@ static void DetectPc(void)
     HMODULE vk = LoadLibraryW(L"vulkan-1.dll"); if (!vk) return;
     PFN_GIPA_ gipa = (PFN_GIPA_)(void *)GetProcAddress(vk, "vkGetInstanceProcAddr");
     int (WINAPI *create)(const VkInstInfo__ *, const void *, void **) = gipa ? (int (WINAPI *)(const VkInstInfo__ *, const void *, void **))gipa(NULL, "vkCreateInstance") : NULL;
-    VkAppInfo__ ai = {0, NULL, "PORTHEON", 1, "none", 1, (1u << 22) | (1u << 12)}; VkInstInfo__ ii = {1, NULL, 0, &ai, 0, NULL, 0, NULL}; void *inst = NULL;
+    VkAppInfo__ ai = {0, NULL, "CageLauncher", 1, "none", 1, (1u << 22) | (1u << 12)}; VkInstInfo__ ii = {1, NULL, 0, &ai, 0, NULL, 0, NULL}; void *inst = NULL;
     if (!create || create(&ii, NULL, &inst) != 0 || !inst) { FreeLibrary(vk); return; }
     int (WINAPI *enumDev)(void *, uint32_t *, void **) = (int (WINAPI *)(void *, uint32_t *, void **))gipa(inst, "vkEnumeratePhysicalDevices");
     void (WINAPI *props)(void *, void *) = (void (WINAPI *)(void *, void *))gipa(inst, "vkGetPhysicalDeviceProperties");
@@ -871,12 +871,12 @@ static int AutoConfigAll(BOOL force)
     for (int g = 0; g < 4; g++) {
         if (!PortOk(g)) continue;
         wchar_t k[32], old[400]; _snwprintf(k, 32, L"auto_%s", G[g].id);
-        GetPrivateProfileStringW(L"PORTHEON", k, L"", old, 400, g_pIni);
+        GetPrivateProfileStringW(L"CAGE", k, L"", old, 400, g_pIni);
         wchar_t sf[MAX_PATH]; SfPath(g, sf);
         BOOL had = FileExists(sf);
         if (!force && !wcscmp(old, sig)) continue;
         if (force || !had || old[0]) { g_kvGame = -1; AutoConfig4(g); done++; }
-        WritePrivateProfileStringW(L"PORTHEON", k, sig, g_pIni);
+        WritePrivateProfileStringW(L"CAGE", k, sig, g_pIni);
     }
     g_kvGame = -1;
     return done;
@@ -890,7 +890,7 @@ static void PcSummary(wchar_t *out, int n)
     out[n - 1] = 0;
 }
 
-/* UFC 5 configured for this PC as soon as PORTHEON opens: UFC5.exe --auto-config (no window) reads the processor,
+/* UFC 5 configured for this PC as soon as Cage Launcher opens: UFC5.exe --auto-config (no window) reads the processor,
    RAM and video card, and only changes UFC5.ini the first time or when that hardware changed (exit code 1) */
 static HANDLE g_autoProc; static int g_autoDone4;
 static DWORD WINAPI AutoCfgThread(void *p)
@@ -915,18 +915,18 @@ static BOOL StartPort(int g, BOOL play)
     /* UFC 5: UFC5.exe runs hidden (--headless), only to start the engine with the settings chosen here, write the log
        and measure the FPS; no window of its own and no FPS overlay over the game */
     _snwprintf(cmd, MAX_PATH + 32, play ? (G[g].ps5 ? L"\"%s\" --play --headless" : L"\"%s\" --play") : L"\"%s\"", exe);
-    if (play && G[g].ps5) AllowSetForegroundWindow(ASFW_ANY);   /* so the game window can take the focus from PORTHEON */
+    if (play && G[g].ps5) AllowSetForegroundWindow(ASFW_ANY);   /* so the game window can take the focus from the launcher */
     STARTUPINFOW si = {sizeof(si)}; PROCESS_INFORMATION pi = {0};
     /* UFC 1: the fight's compute shader 0xb61e59a3b11b03ad is fixed by a corrected SPIR-V in the engine's shader patch
        folder (user\shader\patch), so it is no longer skipped: skipping it left its hit list unwritten for the shaders
        after it. The engine runs on the classic single-threaded GPU path: with the Vulkan recording threads and the draw
        pipe, a fight froze when a submission handed to them never reached the GPU while the GPU command thread waited for
-       it inside a readback (logs of 2026-10-19). ufc1_stable_engine=0 in portheon.ini turns it off for a test. */
+       it inside a readback (logs of 2026-10-19). ufc1_stable_engine=0 in cage.ini turns it off for a test. */
     static const wchar_t *const envK[] = {L"BB_VK_RECORD_THREAD", L"BB_DRAW_PIPE"}, *const envV[] = {L"0", L"0"};
-    BOOL stable = g == 0 && GetPrivateProfileIntW(L"PORTHEON", L"ufc1_stable_engine", 1, g_pIni);
+    BOOL stable = g == 0 && GetPrivateProfileIntW(L"CAGE", L"ufc1_stable_engine", 1, g_pIni);
     wchar_t oldV[2][256]; DWORD had[2] = {0, 0};
     if (stable) for (int i = 0; i < 2; i++) { had[i] = GetEnvironmentVariableW(envK[i], oldV[i], 256); SetEnvironmentVariableW(envK[i], envV[i]); }
-    /* started as a plain process, like PORTHEON 1.x: inside a job object the UFC 5 engine renders the fight black */
+    /* started as a plain process: inside a job object the UFC 5 engine renders the fight black */
     FILETIME started; GetSystemTimeAsFileTime(&started);
     BOOL okp = CreateProcessW(exe, cmd, NULL, NULL, FALSE, 0, NULL, dir, &si, &pi); DWORD perr = GetLastError();
     if (stable) for (int i = 0; i < 2; i++) SetEnvironmentVariableW(envK[i], had[i] && had[i] < 256 ? oldV[i] : NULL);
@@ -992,13 +992,13 @@ static void OpenLogs(void)
 static void About(void)
 {
     MessageBoxW(g_wnd, g_lang ?
-        L"PORTHEON " APP_VER L" - Ports & Mods\n\nOne launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5.\n\n"
+        L"CAGE LAUNCHER " APP_VER L"\n\nOne launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5.\n\n"
         L"The ports are built on open-source projects: SacredFire / bbport (GNSB), shadPS4, KytyPS5 and the libraries listed in each port's licenses folder. "
         L"GPL-2.0-or-later, source code in the src folder.\n\nNot affiliated with Electronic Arts, the UFC or Sony. You need your own copy of each game." :
-        L"PORTHEON " APP_VER L" - Ports & Mods\n\nUm launcher para os ports para PC do EA SPORTS UFC, UFC 2, UFC 3, UFC 4 e UFC 5.\n\n"
+        L"CAGE LAUNCHER " APP_VER L"\n\nUm launcher para os ports para PC do EA SPORTS UFC, UFC 2, UFC 3, UFC 4 e UFC 5.\n\n"
         L"Os ports são feitos sobre projetos de código aberto: SacredFire / bbport (GNSB), shadPS4, KytyPS5 e as bibliotecas listadas na pasta licenses de cada port. "
         L"GPL-2.0-or-later, código-fonte na pasta src.\n\nSem afiliação com a Electronic Arts, o UFC ou a Sony. É preciso ter a sua própria cópia de cada jogo.",
-        L"PORTHEON", MB_OK | MB_ICONINFORMATION);
+        L"CAGE LAUNCHER", MB_OK | MB_ICONINFORMATION);
 }
 
 static void DropdownMenu(int idx)
@@ -1124,7 +1124,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
             case H_LOGS: OpenLogs(); break;
             case H_PLAY: Play(); break;
             case H_ABOUT: About(); break;
-            case H_EN: case H_PT: g_lang = h == H_EN; WritePrivateProfileStringW(L"PORTHEON", L"language", g_lang ? L"0" : L"1", g_pIni); g_msg[0] = 0; InvalidateRect(w, NULL, FALSE); break;
+            case H_EN: case H_PT: g_lang = h == H_EN; WritePrivateProfileStringW(L"CAGE", L"language", g_lang ? L"0" : L"1", g_pIni); g_msg[0] = 0; InvalidateRect(w, NULL, FALSE); break;
         }
         return 0;
     }
@@ -1172,8 +1172,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
 {
     (void)prev; (void)cmdline;
     g_inst = inst;
-    HANDLE single = CreateMutexW(NULL, TRUE, L"PORTHEON_Launcher_Single");
-    if (GetLastError() == ERROR_ALREADY_EXISTS) { HWND o = FindWindowW(L"PortheonLauncher", NULL); if (o) { ShowWindow(o, SW_RESTORE); SetForegroundWindow(o); } return 0; }
+    HANDLE single = CreateMutexW(NULL, TRUE, L"CAGE_LAUNCHER_Single");
+    if (GetLastError() == ERROR_ALREADY_EXISTS) { HWND o = FindWindowW(L"CageLauncher", NULL); if (o) { ShowWindow(o, SW_RESTORE); SetForegroundWindow(o); } return 0; }
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     INITCOMMONCONTROLSEX ic = {sizeof(ic), ICC_STANDARD_CLASSES}; InitCommonControlsEx(&ic);
@@ -1181,15 +1181,15 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     DarkMenus();
 
     GetModuleFileNameW(NULL, g_exeDir, MAX_PATH); wchar_t *s = wcsrchr(g_exeDir, L'\\'); if (s) *s = 0;
-    { wchar_t la[MAX_PATH] = L"", d[MAX_PATH]; GetEnvironmentVariableW(L"LOCALAPPDATA", la, MAX_PATH); Join(d, la, L"PORTHEON"); CreateDirectoryW(d, NULL); Join(g_pIni, d, L"portheon.ini"); }
-    g_lang = GetPrivateProfileIntW(L"PORTHEON", L"language", 1, g_pIni) ? 0 : 1;   /* PORTHEON 1.x: language=1 is PT-BR */
-    wchar_t selId[16]; GetPrivateProfileStringW(L"PORTHEON", L"selected_game", L"UFC5", selId, 16, g_pIni);
+    { wchar_t la[MAX_PATH] = L"", d[MAX_PATH]; GetEnvironmentVariableW(L"LOCALAPPDATA", la, MAX_PATH); Join(d, la, L"CageLauncher"); CreateDirectoryW(d, NULL); Join(g_pIni, d, L"cage.ini"); }
+    g_lang = GetPrivateProfileIntW(L"CAGE", L"language", 1, g_pIni) ? 0 : 1;   /* language=1 is PT-BR */
+    wchar_t selId[16]; GetPrivateProfileStringW(L"CAGE", L"selected_game", L"UFC5", selId, 16, g_pIni);
     for (int i = 0; i < NGAMES; i++) { ReadVersion(i); if (!_wcsicmp(selId, G[i].id)) g_sel = i; }
 
     g_imgBg = LoadPngRes(102); g_imgLogo = LoadPngRes(101);
     g_brField = CreateSolidBrush(C_FIELD);
 
-    WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"PortheonLauncher";
+    WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"CageLauncher";
     wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW); wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
     RegisterClassExW(&wc);
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
@@ -1204,7 +1204,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     MakeFonts();
     RECT r = {0, 0, SC(BASE_W), SC(BASE_H)}; AdjustWindowRectExForDpi(&r, style, FALSE, 0, g_dpi);
     int ww = r.right - r.left, wh = r.bottom - r.top;
-    HWND w = CreateWindowExW(0, wc.lpszClassName, L"PORTHEON - Ports & Mods", style,
+    HWND w = CreateWindowExW(0, wc.lpszClassName, L"CAGE LAUNCHER", style,
                              mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - ww) / 2, mi.rcWork.top + max(0, (wah - wh) / 2), ww, wh, NULL, NULL, inst, NULL);
     BOOL dark = TRUE; DwmSetWindowAttribute(w, 20, &dark, sizeof(dark));
     COLORREF cap = RGB(8, 10, 18); DwmSetWindowAttribute(w, 35 /* DWMWA_CAPTION_COLOR */, &cap, sizeof(cap));

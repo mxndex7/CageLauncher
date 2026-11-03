@@ -1,21 +1,21 @@
-PORTHEON 2.7 - Ports & Mods
-===========================
+CAGE LAUNCHER 2.7
+=================
 
-PT  Abra o PORTHEON.exe e escolha um jogo na esquerda (UFC 1, 2, 3, 4 ou 5). Escolha a pasta do
+PT  Abra o CageLauncher.exe e escolha um jogo na esquerda (UFC 1, 2, 3, 4 ou 5). Escolha a pasta do
     dump do jogo em "Procurar" e aperte JOGAR. PARAR fecha o jogo.
     As opções de VÍDEO e JOGABILIDADE são gravadas direto no port.
     Suas configurações, saves e logs do UFC 1 ao 4 ficam em %LOCALAPPDATA%\UFC1Native ...
     %LOCALAPPDATA%\UFC4Native. Os do UFC 5 ficam em games\UFC5.
 
-    Novo na 2.7:
-    - O PORTHEON lê o seu PC (placa de vídeo, processador, RAM e monitor) e escolhe sozinho as
+    Destaques:
+    - O Cage Launcher lê o seu PC (placa de vídeo, processador, RAM e monitor) e escolhe sozinho as
       melhores configurações de cada UFC, na primeira vez e quando o hardware muda.
     - Modo Intel Arc automático: avisa se o Resizable BAR estiver desligado e usa as opções certas
       para o Arc.
-    - Linux e Steam Deck: rode  bash portheon.sh  (usa o Proton/umu-launcher ou o Wine 9+).
+    - Linux e Steam Deck: rode  bash cage.sh  (usa o Proton/umu-launcher ou o Wine 9+).
     Mais detalhes no README.md.
 
-    Novo na 2.6, no UFC 5:
+    No UFC 5:
     - Limite de FPS: 60, 120 ou 144 (experimental).
     - Geração de quadros com o Lossless Scaling, para ver 120/144 FPS na tela.
     - Tela cheia sempre na resolução do monitor.
@@ -23,9 +23,9 @@ PT  Abra o PORTHEON.exe e escolha um jogo na esquerda (UFC 1, 2, 3, 4 ou 5). Esc
       completo na próxima partida e abrir o Lossless Scaling.
     O passo a passo do Lossless Scaling está em games\UFC5\LEIA-ME.txt.
 
-EN  Open PORTHEON.exe, pick a game on the left, choose your game dump folder with "Browse" and
+EN  Open CageLauncher.exe, pick a game on the left, choose your game dump folder with "Browse" and
     press PLAY (STOP closes the game).
-    New in 2.6 for UFC 5: a 60/120/144 FPS cap, frame generation through Lossless Scaling, and
+    For UFC 5: a 60/120/144 FPS cap, frame generation through Lossless Scaling, and
     fullscreen that always uses the monitor's resolution. In UFC 5, "Advanced settings" opens a
     menu with the port's own window, a one-session full diagnostic and Lossless Scaling.
 

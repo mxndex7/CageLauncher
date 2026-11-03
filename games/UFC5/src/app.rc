@@ -12,10 +12,10 @@ BEGIN
   BEGIN
     BLOCK "041604B0"
     BEGIN
-      VALUE "CompanyName", "PORTHEON"
-      VALUE "FileDescription", "PORTHEON - EA SPORTS UFC 5 (port para PC)"
+      VALUE "CompanyName", "Cage Launcher"
+      VALUE "FileDescription", "Cage Launcher - EA SPORTS UFC 5 (port para PC)"
       VALUE "FileVersion", "1.8.1"
-      VALUE "ProductName", "PORTHEON UFC 5"
+      VALUE "ProductName", "Cage Launcher UFC 5"
       VALUE "ProductVersion", "1.8.1"
       VALUE "OriginalFilename", "UFC5.exe"
     END
