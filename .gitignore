@@ -1,0 +1,19 @@
+# binários e dependências dos ports (não versionados)
+games/*/bin/
+games/*/python/
+games/*/share/
+games/*/tools/
+games/*/patches/
+games/UFC1/licenses/
+games/UFC2/licenses/
+games/UFC3/licenses/
+games/UFC4/licenses/
+*.exe
+*.dll
+*.pyd
+*.zip
+__pycache__/
+
+# estado de execução e artefatos de build
+games/*/*.ini
+*.res

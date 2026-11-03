@@ -1,0 +1,145 @@
+PORTHEON - EA SPORTS UFC 5 (PS5, PPSA03541) - port para PC v1.8.1
+==================================================================
+
+O que é
+-------
+O UFC 5 empacotado como um jogo de PC do PORTHEON. O motor fica em bin\UFC5-Game.exe (KytyPS5,
+build ajustado para o UFC 5): o código do jogo roda no seu processador e o vídeo do PS5 é
+traduzido para Vulkan. O launcher acha o jogo sozinho, lê o seu PC e liga as opções de mais FPS.
+
+Não contém arquivos do jogo: você precisa do seu próprio dump do UFC 5.
+
+Novo na 1.8
+-----------
+- Limite de FPS 60, 120 ou 144 ("Limite de FPS" no PORTHEON, "FPS máximo (vblank)" aqui).
+- Geração de quadros com o Lossless Scaling: 120/144 FPS na tela.
+- Tela cheia sempre na resolução do monitor. Antes, com 1280x720, a imagem ficava pequena no meio
+  da tela. A resolução não muda o FPS neste motor: o jogo renderiza por dentro do mesmo jeito.
+- Diagnóstico completo de uma partida, para achar onde a luta perde tempo no seu PC.
+
+Novo na 1.8.1
+-------------
+- Placas Intel Arc: o port detecta sozinho e liga o modo Intel Arc (limite de memória de vídeo em
+  85% da placa). Se o Resizable BAR estiver desligado na BIOS, o port avisa: o Arc precisa dele.
+
+O FPS da luta, sem rodeios
+--------------------------
+Num Ryzen 5 5500 + RTX 4060 a luta roda perto de 30 FPS e os menus a 60. Quem limita é o
+processador: o emulador traduz o jogo de PS5 em tempo real. Placa de vídeo e resolução quase não
+mudam isso. 120/144 FPS de verdade na luta não dá com este motor nesse processador. O que dá:
+
+1. Limite de FPS 120 ou 144. O motor mostra cada quadro em passos de 8,3/6,9 ms em vez de
+   16,7 ms: os menus passam de 60 e a luta pode ganhar alguns FPS.
+   É experimental: com 120 ou 144 o jogo passa a achar que está numa tela de 120 Hz. Na primeira
+   luta, compare o relógio do round com um relógio de verdade. Se andar mais rápido, volte para 60.
+2. Geração de quadros (Lossless Scaling). Ela cria quadros entre os do jogo, e a tela mostra
+   120/144. A imagem fica bem mais fluida, mas o jogo por dentro continua no FPS do motor e o
+   controle fica com um pouco mais de atraso.
+
+Como ter 120/144 FPS na tela (Lossless Scaling, da Steam)
+---------------------------------------------------------
+1. No Lossless Scaling, configure:
+   - Frame Generation: LSFG (a versão mais nova da lista);
+   - Mode: Adaptive, Target 144 (ou 120, ou a frequência do seu monitor);
+   - Scaling type: pode ficar Off;
+   - Auto Scale: desligado.
+   Se a imagem oscilar, teste Mode Fixed com X4.
+2. No PORTHEON (UFC 5), escolha Geração de quadros: "Lossless (liga sozinho)". Se quiser, coloque
+   também o Limite de FPS em 120 ou 144.
+3. Aperte JOGAR. O port abre o Lossless Scaling minimizado antes do jogo. Uns 8 segundos depois
+   que o jogo aparece, ele aperta Ctrl+Alt+S. Ctrl+Alt+S de novo desliga.
+
+Ajustes e problemas:
+- Se o seu atalho no Lossless Scaling não for Ctrl+Alt+S, coloque o seu no UFC5.ini, por exemplo
+  ls_hotkey=Alt+F10. Para mudar a espera, use ls_delay=8 (em segundos).
+- Se você já tem um perfil do UFC5-Game.exe com Auto Scale no Lossless Scaling, escolha "Lossless
+  (só abrir)".
+- Se o Lossless Scaling roda como administrador, abra o PORTHEON como administrador também. Senão
+  o Windows bloqueia o atalho.
+- O "FPS na tela" do port mostra o FPS real do motor. O contador do Lossless Scaling (Draw FPS)
+  mostra os dois, por exemplo 30/144.
+
+Diagnóstico completo (1 partida)
+--------------------------------
+Para ligar, use PORTHEON > Configurações avançadas > "Diagnóstico completo na próxima partida",
+ou a caixa de mesmo nome aqui no UFC5.exe.
+
+Na próxima partida, o motor grava o próprio log (bin\_Logs\UFC5_..._motor.txt). Esse log mostra
+quanto tempo a thread de comandos da GPU passa trabalhando, esperando a placa de vídeo ou esperando
+o jogo, e o custo das sincronizações de memória.
+
+Jogue pelo menos 1 minuto de luta, feche o jogo e mande os dois arquivos novos da pasta bin\_Logs.
+Essa partida pode ficar um pouco mais lenta e não conta para a calibração. Depois o diagnóstico
+desliga sozinho.
+
+Como jogar
+----------
+1. Abra o PORTHEON.exe, escolha UFC 5 e aperte JOGAR. Ou abra o UFC5.exe (nesta pasta). Na
+   primeira vez ele cria o atalho "EA SPORTS UFC 5" na área de trabalho, que entra direto no jogo.
+2. Na primeira vez ele procura o jogo em Área de Trabalho\UFC 5 e acha lá dentro a pasta do dump
+   (a que tem eboot.bin, sce_sys e Data). Se não achar, use "Procurar...".
+Atalho direto, sem abrir a janela:  UFC5.exe --play
+
+Teclado: J = X, L = O, I = Triângulo, K = Quadrado, setas = d-pad, WASD = analógico esquerdo,
+F/H/T/G = analógico direito, Q/E = L1/R1, Z/C = L2/R2, Enter = Options. O controle DualSense
+funciona direto.
+
+O que o port faz sozinho
+------------------------
+- O perfil "Máximo FPS" usa:
+  - apresentação Immediate, sem esperar o VSync;
+  - shaders em modo Performance;
+  - tela cheia sem bordas;
+  - prioridade Alta;
+  - GPU dedicada forçada no Windows (importante em notebook);
+  - plano de energia Alto desempenho enquanto o jogo está aberto;
+  - notificações de troféu desligadas.
+  "Equilibrado" usa Mailbox (sem tearing). "Qualidade" usa VSync.
+- Matemática do console: as threads do jogo usam o mesmo modo de ponto flutuante do PS5. Isso deixa
+  a física e as animações da luta mais rápidas.
+- Calibração automática: até 12 lutas. O port testa 6 ajustes do motor, cada um em uma luta com e
+  outra sem, e só fica com o que der mais FPS. Os ajustes são: matemática do console, preparação
+  paralela, núcleos próprios, proteção de memória em blocos maiores, menos threads de shader e
+  prioridade acima do normal.
+  Se você trocar o Limite de FPS no meio de um teste, aquele teste começa de novo.
+- Patches de CPU AMD, Tesselação e Texturas bindless ficam desligados: com eles a luta ficava preta
+  ou recompilava todos os shaders. expert_options=1 no UFC5.ini libera essas opções.
+- Modo X3D: num Ryzen X3D, liga sozinho o --cpu-placement. Em outros processadores fica desligado.
+- Placa com menos de 7 GB: limite de memória de vídeo em 85% da placa.
+- Sem economia de energia: o Windows nunca põe o jogo em modo econômico (EcoQoS).
+
+FPS na tela: aparece lá em cima, com cor: verde de 50 para cima, amarelo de 30 para cima e vermelho
+abaixo de 30. Mostra também a média e o 1% pior da sessão. F10 liga e desliga durante o jogo.
+
+Quando o jogo fecha, o port mostra "na luta X FPS", a média, o 1% pior e o máximo da sessão. O
+"na luta" conta só a luta: menus e entradas dos lutadores ficam de fora. Esse resultado também vai
+para o fim do .log, junto com o FPS de cada segundo.
+
+Shaders: na primeira vez em cada arena ou menu, o emulador compila os shaders e pode engasgar
+alguns segundos. Isso fica salvo no cache (bin\_ShaderCache e bin\_PipelineCache), e depois fica
+liso. Não limpe o cache sem motivo.
+
+Memória virtual: com 16 GB de RAM, use um arquivo de paginação de 16 a 32 GB no SSD. O port avisa
+e configura isso uma vez, se faltar.
+
+Onde fica cada coisa
+--------------------
+- Configurações do port: UFC5.ini, nesta pasta.
+- Logs: bin\_Logs (botão "Abrir logs"). Se der problema, mande o .log mais novo.
+- Saves e cache: na pasta bin.
+- Mapeamento de teclas: em "Argumentos extras", por exemplo:
+  --keymap Cross=Space --keymap Circle=Escape
+- Cheats/patches (ETAHen .json): em "Arquivo de cheats".
+
+Problemas
+---------
+- Pede o Microsoft Visual C++ Redistributable: instale o vc_redist.x64.exe que o port abre.
+- "O Vulkan não está instalado": atualize o driver da placa de vídeo (precisa de Vulkan 1.3).
+- Gráficos quebrados depois de trocar o driver ou o emulador: use "Limpar cache de shaders".
+- Travou carregando: teste o "PlayGo hack".
+- Com 120/144 o round fica acelerado: volte o Limite de FPS para 60.
+
+Código-fonte: src\ (launcher em C/Win32, GPL-2.0-or-later, como o PORTHEON).
+Motor: KytyPS5, GPL-2.0 (bin\LICENSE-GPL-2.0.txt, bin\README-motor-KytyPS5.txt).
+Lossless Scaling é um programa pago e separado, da Steam. O port só o abre e aperta o atalho dele.
+Não é afiliado à Electronic Arts, ao UFC nem à Sony. Você precisa da sua própria cópia do jogo.
