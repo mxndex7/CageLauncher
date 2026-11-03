@@ -190,7 +190,8 @@ static const Field SW5[6] = {{S_FULL, L"fullscreen", NULL, 0, 1, TRUE}, {S_FASTS
 static HINSTANCE g_inst;
 static HWND g_wnd, g_editGame, g_editPlayer;
 static int g_dpi = 96, g_sel = 4, g_hot = -1;
-static int g_menuOpen = -1, g_down = -1;   /* só para o desenho: dropdown com o menu aberto, JOGAR pressionado */
+static int g_menuOpen = -1, g_down = -1;   /* só para o desenho: dropdown com o menu aberto, JOGAR/PARAR pressionado */
+static BOOL g_downStop;                    /* o clique foi no PARAR: se o jogo fechar antes de soltar, o JOGAR não aparece pressionado */
 static HFONT g_fTitle, g_fCard, g_fText, g_fSmall, g_fSection, g_fPlay, g_fBtn, g_fFoot, g_fLabel, g_fTag, g_fLogo, g_fLogoSub;
 static HBRUSH g_brField;
 static wchar_t g_exeDir[MAX_PATH], g_pIni[MAX_PATH], g_msg[512];
@@ -464,10 +465,10 @@ static void Button(HDC dc, GpGraphics *g, RECT r, const wchar_t *t, int id)
 
 static void PlayButton(HDC dc, GpGraphics *g, RECT r)
 {
-    BOOL hot = g_hot == H_PLAY, can = Status(g_sel) == S_READY || g_proc;
+    BOOL hot = g_hot == H_PLAY, can = Status(g_sel) == S_READY || g_proc, down = g_down == H_PLAY && g_downStop == (g_proc != NULL);
     const wchar_t *t = g_proc ? T(S_STOP) : T(S_PLAY); COLORREF tc;
-    if (g_proc) { Box(g, r, SC(2), A(g_down == H_PLAY ? C_OFF : hot ? C_ROWSEL : C_BG, 255), A(C_TEXT, 255), 1.0f); tc = C_TEXT; }   /* PARAR: contorno branco, nunca vermelho sólido */
-    else if (can) { Box(g, r, SC(2), A(g_down == H_PLAY ? C_ACCDOWN : hot ? C_ACCHOT : C_ACCENT, 255), 0, 0); tc = RGB(255, 255, 255); }
+    if (g_proc) { Box(g, r, SC(2), A(down ? C_OFF : hot ? C_ROWSEL : C_BG, 255), A(C_TEXT, 255), 1.0f); tc = C_TEXT; }   /* PARAR: contorno branco, nunca vermelho sólido */
+    else if (can) { Box(g, r, SC(2), A(down ? C_ACCDOWN : hot ? C_ACCHOT : C_ACCENT, 255), 0, 0); tc = RGB(255, 255, 255); }
     else { Box(g, r, SC(2), A(C_OFF, 255), 0, 0); tc = C_SUB; }
     SetTextCharacterExtra(dc, SC(3));
     if (g_proc) {   /* ícone de parar (quadrado) antes do texto */
@@ -1129,7 +1130,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
     case WM_LBUTTONDOWN: {
         SetFocus(w);
         int h = HitAt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
-        if (h == H_PLAY) { g_down = H_PLAY; InvalidateRect(w, NULL, FALSE); UpdateWindow(w); }   /* desenho pressionado até soltar o botão */
+        if (h == H_PLAY) { g_down = H_PLAY; g_downStop = g_proc != NULL; InvalidateRect(w, NULL, FALSE); UpdateWindow(w); }   /* desenho pressionado até soltar o botão */
         if (h >= H_CARD && h < H_CARD + NGAMES) Select(h - H_CARD);
         else if (h >= H_DROP && h < H_DROP + 11) DropdownMenu(h - H_DROP);
         else if (h >= H_SWITCH && h < H_SWITCH + 6) ToggleSwitch(h - H_SWITCH);
