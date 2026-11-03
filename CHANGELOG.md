@@ -5,6 +5,8 @@
 Primeira versão do Cage Launcher: um launcher para os ports para PC do EA SPORTS UFC, UFC 2, UFC 3,
 UFC 4 e UFC 5.
 
+- **Visual escuro e minimalista**, em preto, branco e vermelho: lista de jogos à esquerda, opções
+  de JOGO, VÍDEO e JOGABILIDADE à direita. O logo é desenhado com a proporção do arquivo.
 - **Melhores configurações para cada PC, em todos os UFC.** Na primeira vez, e quando o hardware
   muda, o Cage Launcher lê o seu PC e configura:
   - no UFC 1 a 4: resolução, limite de FPS, apresentação, modo PS4 Pro, FSR e ultra desempenho;

@@ -88,11 +88,15 @@ int WINAPI GdipDisposeImage(GpImage *);
 #define C_ORANGE  RGB(240, 160, 32)   /* aviso (âmbar) */
 #define C_BAD     RGB(255, 107, 94)   /* erro: coral, diferente do acento */
 
-#define BASE_W 1180
-#define BASE_H 704
-#define SIDE_W 322
-#define X0 356
-#define X1 1148
+#define BASE_W 1140   /* janela de tamanho fixo, em pixels a 96 DPI (tudo passa por SC) */
+#define BASE_H 768
+#define SIDE_W 260    /* sidebar */
+#define X0 304        /* painel da direita: de X0 a X1 */
+#define X1 1100
+#define LOGO_Y 24     /* slot do logo (aspect-fit dentro dele) */
+#define LOGO_H 192
+#define LIST_Y 240    /* lista de jogos */
+#define ROW_H 56
 
 /* ---------------------------------------------------------------- strings (PT-BR / EN) */
 enum { S_READY, S_PICK, S_NOPORT, S_RUNNING, S_GAME, S_VIDEO, S_GAMEPLAY, S_BROWSE, S_PORT, S_CLICKCHANGE, S_ADV, S_LOGS, S_PLAY, S_STOP,
@@ -340,6 +344,16 @@ static GpImage *LoadPngRes(int id)
     IStream *s = SHCreateMemStream((const BYTE *)p, sz); if (!s) return NULL;
     GpImage *img = NULL; GdipCreateBitmapFromStream(s, &img); s->lpVtbl->Release(s); return img;
 }
+/* contorno octogonal de 1px: o motivo "cage" (só a moldura do logo e o indicador de status do cabeçalho) */
+static void Octagon(GpGraphics *g, RECT r, int cut, COLORREF c)
+{
+    int l = r.left, t = r.top, rr = r.right - 1, b = r.bottom - 1;
+    GpPath *p = NULL; GdipCreatePath(0, &p);
+    GdipAddPathLineI(p, l + cut, t, rr - cut, t); GdipAddPathLineI(p, rr, t + cut, rr, b - cut);
+    GdipAddPathLineI(p, rr - cut, b, l + cut, b); GdipAddPathLineI(p, l, b - cut, l, t + cut);
+    GdipClosePathFigure(p);
+    GpPen *pen = NULL; GdipCreatePen1(A(c, 255), 1.0f, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); GdipDeletePath(p);
+}
 static void BuildBg(int w, int h)
 {
     if (g_bgCache && g_bgW == w && g_bgH == h) return;
@@ -350,11 +364,30 @@ static void BuildBg(int w, int h)
     HBRUSH b = CreateSolidBrush(C_BG); RECT r = {0, 0, w, h}; FillRect(dc, &r, b); DeleteObject(b);
     b = CreateSolidBrush(C_SIDE); RECT s = {0, 0, SC(SIDE_W), h}; FillRect(dc, &s, b); DeleteObject(b);          /* sidebar sólida */
     b = CreateSolidBrush(C_FIELDB); RECT d = {SC(SIDE_W), 0, SC(SIDE_W) + 1, h}; FillRect(dc, &d, b); DeleteObject(b);   /* divisor de 1px */
+    RECT slot = {SC(24), SC(LOGO_Y), SC(SIDE_W - 24), SC(LOGO_Y + LOGO_H)};
+    UINT iw = 0, ih = 0;
+    if (g_imgLogo) { GdipGetImageWidth(g_imgLogo, &iw); GdipGetImageHeight(g_imgLogo, &ih); }
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g);
     if (g) {
-        GdipSetInterpolationMode(g, 7); GdipSetSmoothingMode(g, 4);
-        if (g_imgLogo) GdipDrawImageRectI(g, g_imgLogo, SC((SIDE_W - 232) / 2), SC(10), SC(232), SC(232));
+        GdipSetInterpolationMode(g, 7); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
+        Octagon(g, slot, SC(18), C_FIELDB);
+        if (iw && ih) {   /* aspect-fit: qualquer proporção, centralizado; o recuo deixa os cantos de 45 graus livres */
+            int pad = SC(14), bw = slot.right - slot.left - 2 * pad, bh = slot.bottom - slot.top - 2 * pad;
+            double k = (double)bw / iw < (double)bh / ih ? (double)bw / iw : (double)bh / ih;
+            int dw = (int)(iw * k + 0.5), dh = (int)(ih * k + 0.5);
+            GdipDrawImageRectI(g, g_imgLogo, slot.left + pad + (bw - dw) / 2, slot.top + pad + (bh - dh) / 2, dw, dh);
+        }
         GdipDeleteGraphics(g);
+    }
+    if (!iw || !ih) {   /* sem logo: CAGE / LAUNCHER em texto */
+        SIZE a, z; int ea = SC(6), ez = SC(5);
+        SetBkMode(dc, TRANSPARENT);
+        SelectObject(dc, g_fLogo); SetTextCharacterExtra(dc, ea); GetTextExtentPoint32W(dc, L"CAGE", 4, &a);
+        SelectObject(dc, g_fLogoSub); SetTextCharacterExtra(dc, ez); GetTextExtentPoint32W(dc, L"LAUNCHER", 8, &z);
+        int cx = (slot.left + slot.right) / 2, y = (slot.top + slot.bottom - a.cy - z.cy) / 2;
+        SelectObject(dc, g_fLogo); SetTextCharacterExtra(dc, ea); SetTextColor(dc, C_TEXT); TextOutW(dc, cx - (a.cx - ea) / 2, y, L"CAGE", 4);
+        SelectObject(dc, g_fLogoSub); SetTextCharacterExtra(dc, ez); SetTextColor(dc, C_SUB); TextOutW(dc, cx - (z.cx - ez) / 2, y + a.cy, L"LAUNCHER", 8);
+        SetTextCharacterExtra(dc, 0);
     }
     SelectObject(dc, o); DeleteDC(dc); ReleaseDC(g_wnd, wdc);
 }
@@ -459,17 +492,17 @@ static COLORREF StatusColor(int s) { return s == S_READY ? C_TEXT : s == S_RUNNI
 
 static void Card(HDC dc, GpGraphics *g, int i, int y)
 {   /* linha plana: selecionada = barra vermelha de 3px + fundo mais claro; hover = fundo mais claro */
-    RECT r = {0, SC(y), SC(SIDE_W), SC(y + 62)};
+    RECT r = {0, SC(y), SC(SIDE_W), SC(y + ROW_H)};
     BOOL sel = i == g_sel, hot = g_hot == H_CARD + i;
     if (sel || hot) Fill(g, r.left, r.top, r.right - r.left, r.bottom - r.top, sel ? C_ROWSEL : C_ROWHOT);
     if (sel) Fill(g, r.left, r.top, SC(3), r.bottom - r.top, C_ACCENT);
-    Text(dc, g_fCard, C_TEXT, SC(28), r.top + SC(10), G[i].name);
+    Text(dc, g_fCard, C_TEXT, SC(28), r.top + SC(7), G[i].name);
     int st = Status(i);
-    Fill(g, SC(29), r.top + SC(41), SC(6), SC(6), StatusColor(st));
-    Text(dc, g_fSmall, C_SUB, SC(42), r.top + SC(35), T(st));
+    Fill(g, SC(29), r.top + SC(37), SC(6), SC(6), StatusColor(st));
+    Text(dc, g_fSmall, C_SUB, SC(42), r.top + SC(31), T(st));
     if (G[i].ps5 && st != S_NOPORT) {   /* tag "NOVO" do port mais recente: texto pequeno vermelho */
         const wchar_t *tag = g_lang ? L"NEW" : L"NOVO";
-        SetTextCharacterExtra(dc, SC(1)); Text(dc, g_fTag, C_ACCENT, SC(SIDE_W - 24) - TextW(dc, g_fTag, tag), r.top + SC(15), tag); SetTextCharacterExtra(dc, 0);
+        SetTextCharacterExtra(dc, SC(1)); Text(dc, g_fTag, C_ACCENT, SC(SIDE_W - 24) - TextW(dc, g_fTag, tag), r.top + SC(13), tag); SetTextCharacterExtra(dc, 0);
     }
     AddHit(r.left, r.top, r.right, r.bottom, H_CARD + i);
 }
@@ -483,55 +516,61 @@ static void Paint(HDC wdc)
     SetBkMode(dc, TRANSPARENT); g_nhits = 0;
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
 
-    /* sidebar: cards and footer */
-    for (int i = 0; i < NGAMES; i++) Card(dc, g, i, 252 + i * 70);
-    int fy = BASE_H - 44;
-    Text(dc, g_fFoot, g_hot == H_ABOUT ? C_TEXT : C_SUB, SC(30), SC(fy), T(S_ABOUT)); AddHit(SC(24), SC(fy - 4), SC(90), SC(fy + 22), H_ABOUT);
-    Text(dc, g_fFoot, C_SUB, SC(150), SC(fy), L"v" APP_VER);
-    Text(dc, g_fFoot, g_lang == 1 ? C_TEXT : C_SUB, SC(222), SC(fy), L"EN"); AddHit(SC(216), SC(fy - 4), SC(246), SC(fy + 22), H_EN);
-    Text(dc, g_fFoot, g_lang == 0 ? C_TEXT : C_SUB, SC(258), SC(fy), L"PT-BR"); AddHit(SC(252), SC(fy - 4), SC(306), SC(fy + 22), H_PT);
+    /* sidebar: lista de jogos e rodapé (Sobre, versão, idioma) */
+    for (int i = 0; i < NGAMES; i++) Card(dc, g, i, LIST_Y + i * ROW_H);
+    int fy = BASE_H - 36;
+    SetTextCharacterExtra(dc, SC(2)); Text(dc, g_fFoot, C_SUB, SC(28), SC(fy - 28), L"CAGE LAUNCHER v" APP_VER); SetTextCharacterExtra(dc, 0);
+    Text(dc, g_fFoot, g_hot == H_ABOUT ? C_TEXT : C_SUB, SC(28), SC(fy), T(S_ABOUT));
+    AddHit(SC(22), SC(fy - 4), SC(34) + TextW(dc, g_fFoot, T(S_ABOUT)), SC(fy + 20), H_ABOUT);
+    { int wpt = TextW(dc, g_fFoot, L"PT-BR"), wsl = TextW(dc, g_fFoot, L"/"), wen = TextW(dc, g_fFoot, L"EN"), gap = SC(8);
+      int xpt = SC(SIDE_W - 28) - wpt, xsl = xpt - gap - wsl, xen = xsl - gap - wen;
+      Text(dc, g_fFoot, g_lang == 1 ? C_TEXT : C_SUB, xen, SC(fy), L"EN"); AddHit(xen - SC(6), SC(fy - 4), xen + wen + SC(4), SC(fy + 20), H_EN);
+      Text(dc, g_fFoot, C_FIELDH, xsl, SC(fy), L"/");
+      Text(dc, g_fFoot, g_lang == 0 ? C_TEXT : C_SUB, xpt, SC(fy), L"PT-BR"); AddHit(xpt - SC(4), SC(fy - 4), xpt + wpt + SC(6), SC(fy + 20), H_PT); }
 
-    /* title, subtitle and status pill */
-    int gsel = g_sel, st = Status(gsel);
-    Text(dc, g_fTitle, C_TEXT, SC(X0), SC(18), G[gsel].name);
-    wchar_t sub[128]; _snwprintf(sub, 128, L"%s - %s", G[gsel].ps5 ? T(S_PS5PORT) : T(S_NATIVE), g_ver[gsel][0] ? g_ver[gsel] : L"?");
-    Text(dc, g_fText, C_SUB, SC(X0 + 2), SC(84), sub);
-    { int tw = TextW(dc, g_fText, T(st)); RECT t = {SC(X1) - tw, SC(30), SC(X1), SC(64)};
-      COLORREF c = StatusColor(st); Fill(g, t.left - SC(18), (t.top + t.bottom) / 2 - SC(4), SC(8), SC(8), c);
-      TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
+    /* cabeçalho: nome do jogo, subtítulo e status (indicador octogonal + texto, sem pílula) */
+    int gsel = g_sel, st = Status(gsel); wchar_t u[32];
+    SetTextCharacterExtra(dc, SC(2)); Text(dc, g_fTitle, C_TEXT, SC(X0 - 2), SC(24), Caps(u, 32, G[gsel].name)); SetTextCharacterExtra(dc, 0);
+    wchar_t sub[128]; _snwprintf(sub, 128, L"%s  ·  %s", G[gsel].ps5 ? T(S_PS5PORT) : T(S_NATIVE), g_ver[gsel][0] ? g_ver[gsel] : L"?");
+    Text(dc, g_fText, C_SUB, SC(X0), SC(84), sub);
+    { int tw = TextW(dc, g_fText, T(st)); RECT t = {SC(X1) - tw, SC(36), SC(X1), SC(64)}; COLORREF c = StatusColor(st);
+      int q = SC(12), qy = (t.top + t.bottom - q) / 2; RECT o = {t.left - SC(10) - q, qy, t.left - SC(10), qy + q};
+      Octagon(g, o, SC(4), c); TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
 
-    /* GAME */
-    Section(dc, g, 114, T(S_GAME));
-    RECT fr = {SC(X0), SC(138), SC(X1 - 186), SC(174)}; Box(g, fr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editGame ? C_ACCENT : C_FIELDB, 255), 1.0f);
-    MoveWindow(g_editGame, fr.left + SC(16), fr.top + SC(9), fr.right - fr.left - SC(28), SC(20), FALSE);
-    RECT br = {SC(X1 - 172), SC(138), SC(X1), SC(174)}; Button(dc, g, br, T(S_BROWSE), H_BROWSE);
+    /* JOGO: pasta do jogo + Procurar, e a linha do port */
+    Section(dc, g, 132, T(S_GAME));
+    RECT fr = {SC(X0), SC(156), SC(X1 - 160), SC(192)};
+    Box(g, fr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editGame ? C_ACCENT : C_FIELDB, 255), 1.0f);
+    MoveWindow(g_editGame, fr.left + SC(14), fr.top + SC(8), fr.right - fr.left - SC(28), SC(20), FALSE);
+    RECT br = {SC(X1 - 148), SC(156), SC(X1), SC(192)}; Button(dc, g, br, T(S_BROWSE), H_BROWSE);
     wchar_t pd[MAX_PATH], line[MAX_PATH + 64]; PortDir(gsel, pd);
-    _snwprintf(line, MAX_PATH + 64, L"%s: %s   -   %s", T(S_PORT), pd, T(S_CLICKCHANGE));
-    RECT pr = {SC(X0), SC(182), SC(X1), SC(202)}; TextR(dc, g_fSmall, g_hot == H_PORT ? C_TEXT : C_SUB, pr, line, DT_LEFT | DT_VCENTER | DT_PATH_ELLIPSIS);
-    AddHit(pr.left, pr.top, pr.left + TextW(dc, g_fSmall, line), pr.bottom, H_PORT);
+    _snwprintf(line, MAX_PATH + 64, L"%s: %s  ·  %s", T(S_PORT), pd, T(S_CLICKCHANGE));
+    RECT pr = {SC(X0), SC(200), SC(X1), SC(220)}; TextR(dc, g_fSmall, g_hot == H_PORT ? C_TEXT : C_SUB, pr, line, DT_LEFT | DT_VCENTER | DT_PATH_ELLIPSIS);
+    { int lw = TextW(dc, g_fSmall, line); AddHit(pr.left, pr.top, pr.left + (lw < pr.right - pr.left ? lw : pr.right - pr.left), pr.bottom, H_PORT); }
 
-    /* VIDEO: 3 rows x 2 columns */
-    Section(dc, g, 214, T(S_VIDEO));
-    const Field *v = Vid(gsel); int nv = G[gsel].ps5 ? 9 : 6, cols = G[gsel].ps5 ? 3 : 2, gap = G[gsel].ps5 ? 20 : 28, cw = (X1 - X0 - gap * (cols - 1)) / cols;
-    for (int i = 0; i < nv; i++) Dropdown(dc, g, X0 + (i % cols) * (cw + gap), 236 + (i / cols) * 64, cw, &v[i], H_DROP + i);
+    /* VÍDEO: 3 linhas x 2 colunas (UFC 1-4) ou x 3 colunas (UFC 5) */
+    Section(dc, g, 242, T(S_VIDEO));
+    const Field *v = Vid(gsel); int nv = G[gsel].ps5 ? 9 : 6, cols = G[gsel].ps5 ? 3 : 2, gap = G[gsel].ps5 ? 20 : 24, cw = (X1 - X0 - gap * (cols - 1)) / cols;
+    for (int i = 0; i < nv; i++) Dropdown(dc, g, X0 + (i % cols) * (cw + gap), 266 + (i / cols) * 66, cw, &v[i], H_DROP + i);
 
-    /* GAMEPLAY */
-    Section(dc, g, 432, T(S_GAMEPLAY));
+    /* JOGABILIDADE: idioma, volume, nome do jogador e switches */
+    Section(dc, g, 480, T(S_GAMEPLAY));
     const Field *gp = Gp(gsel);
-    Dropdown(dc, g, X0, 454, 300, &gp[0], H_DROP + 9);
-    Dropdown(dc, g, X0 + 316, 454, 156, &gp[1], H_DROP + 10);
-    Text(dc, g_fText, C_SUB, SC(X0 + 488), SC(454), T(S_PLAYER));
-    RECT nr = {SC(X0 + 488), SC(474), SC(X1), SC(510)}; Box(g, nr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editPlayer ? C_ACCENT : C_FIELDB, 255), 1.0f);
-    MoveWindow(g_editPlayer, nr.left + SC(16), nr.top + SC(9), nr.right - nr.left - SC(28), SC(20), FALSE);
+    Dropdown(dc, g, X0, 504, 300, &gp[0], H_DROP + 9);
+    Dropdown(dc, g, X0 + 316, 504, 156, &gp[1], H_DROP + 10);
+    Text(dc, g_fLabel, C_SUB, SC(X0 + 488), SC(504), T(S_PLAYER));
+    RECT nr = {SC(X0 + 488), SC(524), SC(X1), SC(560)};
+    Box(g, nr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editPlayer ? C_ACCENT : C_FIELDB, 255), 1.0f);
+    MoveWindow(g_editPlayer, nr.left + SC(14), nr.top + SC(8), nr.right - nr.left - SC(28), SC(20), FALSE);
     int ns; const Field *sw = Sw(gsel, &ns);
-    static const int sx[3] = {X0, X0 + 266, X0 + 530};
-    for (int i = 0; i < ns; i++) Switch(dc, g, sx[i % 3], 528 + (i / 3) * 38, &sw[i], H_SWITCH + i);
+    static const int sx[3] = {X0, X0 + 266, X0 + 532};
+    for (int i = 0; i < ns; i++) Switch(dc, g, sx[i % 3], 582 + (i / 3) * 36, &sw[i], H_SWITCH + i);
 
-    /* buttons */
-    RECT ab = {SC(X0), SC(612), SC(X0 + 270), SC(656)}; Button(dc, g, ab, T(S_ADV), H_ADV);
-    RECT lb = {SC(X0 + 284), SC(612), SC(X0 + 404), SC(656)}; Button(dc, g, lb, T(S_LOGS), H_LOGS);
-    RECT pb = {SC(X1 - 300), SC(600), SC(X1), SC(660)}; PlayButton(dc, g, pb);
-    if (g_msg[0]) { RECT mr = {SC(X0), SC(668), SC(X1), SC(696)}; TextR(dc, g_fSmall, g_msgColor, mr, g_msg, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS); }
+    /* botões e mensagem */
+    RECT ab = {SC(X0), SC(664), SC(X0 + 288), SC(704)}; Button(dc, g, ab, T(S_ADV), H_ADV);
+    RECT lb = {SC(X0 + 300), SC(664), SC(X0 + 400), SC(704)}; Button(dc, g, lb, T(S_LOGS), H_LOGS);
+    RECT pb = {SC(X1 - 240), SC(656), SC(X1), SC(712)}; PlayButton(dc, g, pb);
+    if (g_msg[0]) { RECT mr = {SC(X0), SC(724), SC(X1), SC(748)}; TextR(dc, g_fSmall, g_msgColor, mr, g_msg, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS); }
 
     GdipDeleteGraphics(g);
     BitBlt(wdc, 0, 0, rc.right, rc.bottom, dc, 0, 0, SRCCOPY);
