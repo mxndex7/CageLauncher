@@ -41,7 +41,7 @@
 
 /* ---------------------------------------------------------------- GDI+ flat API (subset) */
 typedef struct { UINT32 GdiplusVersion; void *DebugEventCallback; BOOL SuppressBackgroundThread; BOOL SuppressExternalCodecs; } GdiplusStartupInput;
-typedef void GpImage; typedef void GpGraphics; typedef void GpBrush; typedef void GpPen; typedef void GpPath;
+typedef void GpImage; typedef void GpGraphics; typedef void GpBrush;
 int WINAPI GdiplusStartup(ULONG_PTR *, const GdiplusStartupInput *, void *);
 int WINAPI GdipLoadImageFromFile(const WCHAR *, GpImage **);
 int WINAPI GdipGetImageWidth(GpImage *, UINT *);
@@ -58,13 +58,6 @@ int WINAPI GdipDeleteBrush(GpBrush *);
 int WINAPI GdipDeleteGraphics(GpGraphics *);
 int WINAPI GdipDisposeImage(GpImage *);
 int WINAPI GdipSetPixelOffsetMode(GpGraphics *, int);
-int WINAPI GdipCreatePen1(UINT32, float, int, GpPen **);
-int WINAPI GdipDeletePen(GpPen *);
-int WINAPI GdipCreatePath(int, GpPath **);
-int WINAPI GdipDeletePath(GpPath *);
-int WINAPI GdipAddPathLineI(GpPath *, INT, INT, INT, INT);
-int WINAPI GdipClosePathFigure(GpPath *);
-int WINAPI GdipDrawPath(GpGraphics *, GpPen *, GpPath *);
 
 /* ---------------------------------------------------------------- colours: preto, branco e vermelho UFC (a paleta do Cage Launcher) */
 #define C_BG      RGB(10, 10, 12)     /* fundo */
@@ -539,19 +532,8 @@ static int HeadlessAutoConfig(BOOL force)
 static void FillC(HDC dc, RECT r, COLORREF c) { HBRUSH b = CreateSolidBrush(c); FillRect(dc, &r, b); DeleteObject(b); }
 static void FrameC(HDC dc, RECT r, COLORREF c) { HBRUSH b = CreateSolidBrush(c); FrameRect(dc, &r, b); DeleteObject(b); }
 static const wchar_t *Caps(wchar_t *out, int n, const wchar_t *s) { wcsncpy(out, s, n - 1); out[n - 1] = 0; CharUpperW(out); return out; }
-/* contorno octogonal de 1px: o motivo "cage" (aqui só a moldura do ícone do jogo) */
-static void Octagon(GpGraphics *g, RECT r, int cut, COLORREF c)
-{
-    int l = r.left, t = r.top, rr = r.right - 1, b = r.bottom - 1;
-    GpPath *p = NULL; GdipCreatePath(0, &p);
-    GdipAddPathLineI(p, l + cut, t, rr - cut, t); GdipAddPathLineI(p, rr, t + cut, rr, b - cut);
-    GdipAddPathLineI(p, rr - cut, b, l + cut, b); GdipAddPathLineI(p, l, b - cut, l, t + cut);
-    GdipClosePathFigure(p);
-    UINT32 argb = 0xFF000000u | ((UINT32)GetRValue(c) << 16) | ((UINT32)GetGValue(c) << 8) | GetBValue(c);
-    GpPen *pen = NULL; GdipCreatePen1(argb, 1.0f, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); GdipDeletePath(p);
-}
 static void BuildHeader(void)
-{   /* faixa sólida: ícone do jogo numa moldura octogonal, título, subtítulo e teclas; linha fina embaixo */
+{   /* faixa sólida: ícone do jogo, título, subtítulo e teclas; linha fina embaixo */
     RECT rc; GetClientRect(g_wnd, &rc);
     int w = rc.right, h = SC(112);
     HDC wdc = GetDC(g_wnd), dc = CreateCompatibleDC(wdc);
@@ -564,15 +546,14 @@ static void BuildHeader(void)
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g);
     if (g) {
         GdipSetInterpolationMode(g, 7 /* HighQualityBicubic */); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
-        RECT fr = {SC(10), SC(6), SC(110), SC(106)}; Octagon(g, fr, SC(16), C_LINE);
         wchar_t p[MAX_PATH]; GpImage *img = NULL; BOOL icon = FALSE;
         if (S.game[0]) Join(p, S.game, L"sce_sys\\icon0.png");
         if (S.game[0] && FileExists(p) && GdipLoadImageFromFile(p, &img) == 0 && img) {
             GdipDrawImageRectI(g, img, SC(18), SC(14), SC(84), SC(84)); GdipDisposeImage(img); icon = TRUE;
         }
         GdipDeleteGraphics(g);
-        if (!icon) { RECT ir = {SC(10), SC(6), SC(110), SC(106)}; SelectObject(dc, g_fontBtn); SetTextColor(dc, C_SUB); SetBkMode(dc, TRANSPARENT);
-                    DrawTextW(dc, L"UFC 5", -1, &ir, DT_CENTER | DT_VCENTER | DT_SINGLELINE); }   /* sem o ícone do jogo */
+        if (!icon) { RECT ir = {SC(18), SC(14), SC(102), SC(98)}; FrameC(dc, ir, C_LINE); SelectObject(dc, g_fontBtn); SetTextColor(dc, C_SUB); SetBkMode(dc, TRANSPARENT);
+                    DrawTextW(dc, L"UFC 5", -1, &ir, DT_CENTER | DT_VCENTER | DT_SINGLELINE); }   /* sem o ícone do jogo: moldura reta de 1px */
     }
     SetBkMode(dc, TRANSPARENT);
     int tx = SC(128); wchar_t t[32];

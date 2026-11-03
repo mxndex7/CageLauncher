@@ -346,16 +346,6 @@ static GpImage *LoadPngRes(int id)
     IStream *s = SHCreateMemStream((const BYTE *)p, sz); if (!s) return NULL;
     GpImage *img = NULL; GdipCreateBitmapFromStream(s, &img); s->lpVtbl->Release(s); return img;
 }
-/* contorno octogonal de 1px: o motivo "cage" (só a moldura do logo e o indicador de status do cabeçalho) */
-static void Octagon(GpGraphics *g, RECT r, int cut, COLORREF c)
-{
-    int l = r.left, t = r.top, rr = r.right - 1, b = r.bottom - 1;
-    GpPath *p = NULL; GdipCreatePath(0, &p);
-    GdipAddPathLineI(p, l + cut, t, rr - cut, t); GdipAddPathLineI(p, rr, t + cut, rr, b - cut);
-    GdipAddPathLineI(p, rr - cut, b, l + cut, b); GdipAddPathLineI(p, l, b - cut, l, t + cut);
-    GdipClosePathFigure(p);
-    GpPen *pen = NULL; GdipCreatePen1(A(c, 255), 1.0f, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); GdipDeletePath(p);
-}
 static void BuildBg(int w, int h)
 {
     if (g_bgCache && g_bgW == w && g_bgH == h) return;
@@ -372,9 +362,8 @@ static void BuildBg(int w, int h)
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g);
     if (g) {
         GdipSetInterpolationMode(g, 7); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
-        Octagon(g, slot, SC(18), C_FIELDB);
-        if (iw && ih) {   /* aspect-fit: qualquer proporção, centralizado; o recuo deixa os cantos livres e dá o respiro do guia da marca */
-            int pad = SC(22), bw = slot.right - slot.left - 2 * pad, bh = slot.bottom - slot.top - 2 * pad;
+        if (iw && ih) {   /* aspect-fit: qualquer proporção, centralizado; o recuo dá o respiro do guia da marca */
+            int pad = SC(16), bw = slot.right - slot.left - 2 * pad, bh = slot.bottom - slot.top - 2 * pad;
             double k = (double)bw / iw < (double)bh / ih ? (double)bw / iw : (double)bh / ih;
             int dw = (int)(iw * k + 0.5), dh = (int)(ih * k + 0.5);
             GdipDrawImageRectI(g, g_imgLogo, slot.left + pad + (bw - dw) / 2, slot.top + pad + (bh - dh) / 2, dw, dh);
@@ -530,14 +519,13 @@ static void Paint(HDC wdc)
       Text(dc, g_fFoot, C_FIELDH, xsl, SC(fy), L"/");
       Text(dc, g_fFoot, g_lang == 0 ? C_TEXT : C_SUB, xpt, SC(fy), L"PT-BR"); AddHit(xpt - SC(4), SC(fy - 4), xpt + wpt + SC(6), SC(fy + 20), H_PT); }
 
-    /* cabeçalho: nome do jogo, subtítulo e status (indicador octogonal + texto, sem pílula) */
+    /* cabeçalho: nome do jogo, subtítulo e status (indicador quadrado + texto, sem pílula) */
     int gsel = g_sel, st = Status(gsel); wchar_t u[32];
     SetTextCharacterExtra(dc, SC(2)); Text(dc, g_fTitle, C_TEXT, SC(X0 - 2), SC(24), Caps(u, 32, G[gsel].name)); SetTextCharacterExtra(dc, 0);
     wchar_t sub[128]; _snwprintf(sub, 128, L"%s  ·  %s", G[gsel].ps5 ? T(S_PS5PORT) : T(S_NATIVE), g_ver[gsel][0] ? g_ver[gsel] : L"?");
     Text(dc, g_fText, C_SUB, SC(X0), SC(84), sub);
     { int tw = TextW(dc, g_fText, T(st)); RECT t = {SC(X1) - tw, SC(36), SC(X1), SC(64)}; COLORREF c = StatusColor(st);
-      int q = SC(12), qy = (t.top + t.bottom - q) / 2; RECT o = {t.left - SC(10) - q, qy, t.left - SC(10), qy + q};
-      Octagon(g, o, SC(4), c); TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
+      int q = SC(8); Fill(g, t.left - SC(10) - q, (t.top + t.bottom - q) / 2, q, q, c); TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
 
     /* JOGO: pasta do jogo + Procurar, e a linha do port */
     Section(dc, g, 132, T(S_GAME));
