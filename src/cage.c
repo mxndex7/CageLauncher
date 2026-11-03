@@ -373,8 +373,8 @@ static void BuildBg(int w, int h)
     if (g) {
         GdipSetInterpolationMode(g, 7); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
         Octagon(g, slot, SC(18), C_FIELDB);
-        if (iw && ih) {   /* aspect-fit: qualquer proporção, centralizado; o recuo deixa os cantos de 45 graus livres */
-            int pad = SC(14), bw = slot.right - slot.left - 2 * pad, bh = slot.bottom - slot.top - 2 * pad;
+        if (iw && ih) {   /* aspect-fit: qualquer proporção, centralizado; o recuo deixa os cantos livres e dá o respiro do guia da marca */
+            int pad = SC(22), bw = slot.right - slot.left - 2 * pad, bh = slot.bottom - slot.top - 2 * pad;
             double k = (double)bw / iw < (double)bh / ih ? (double)bw / iw : (double)bh / ih;
             int dw = (int)(iw * k + 0.5), dh = (int)(ih * k + 0.5);
             GdipDrawImageRectI(g, g_imgLogo, slot.left + pad + (bw - dw) / 2, slot.top + pad + (bh - dh) / 2, dw, dh);
