@@ -1,5 +1,5 @@
-CAGE LAUNCHER - EA SPORTS UFC 5 (PS5, PPSA03541) - port para PC v1.8.1
-=======================================================================
+CAGE LAUNCHER - EA SPORTS UFC 5 (PS5, PPSA03541) - port para PC v1.0
+=====================================================================
 
 O que é
 -------
@@ -9,16 +9,13 @@ traduzido para Vulkan. O launcher acha o jogo sozinho, lê o seu PC e liga as op
 
 Não contém arquivos do jogo: você precisa do seu próprio dump do UFC 5.
 
-Novo na 1.8
------------
+Destaques
+---------
 - Limite de FPS 60, 120 ou 144 ("Limite de FPS" no Cage Launcher, "FPS máximo (vblank)" aqui).
 - Geração de quadros com o Lossless Scaling: 120/144 FPS na tela.
-- Tela cheia sempre na resolução do monitor. Antes, com 1280x720, a imagem ficava pequena no meio
-  da tela. A resolução não muda o FPS neste motor: o jogo renderiza por dentro do mesmo jeito.
+- Tela cheia sempre na resolução do monitor. A resolução não muda o FPS neste motor: o jogo
+  renderiza por dentro do mesmo jeito.
 - Diagnóstico completo de uma partida, para achar onde a luta perde tempo no seu PC.
-
-Novo na 1.8.1
--------------
 - Placas Intel Arc: o port detecta sozinho e liga o modo Intel Arc (limite de memória de vídeo em
   85% da placa). Se o Resizable BAR estiver desligado na BIOS, o port avisa: o Arc precisa dele.
 

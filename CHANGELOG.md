@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.7
+## 1.0
 
 Primeira versão do Cage Launcher: um launcher para os ports para PC do EA SPORTS UFC, UFC 2, UFC 3,
 UFC 4 e UFC 5.
@@ -17,7 +17,7 @@ UFC 4 e UFC 5.
   - aviso se o Resizable BAR estiver desligado;
   - VSync (Fifo) e modo PS4 Pro desligado no UFC 1–4;
   - limite de VRAM no UFC 5.
-- **UFC 5** (port v1.8.1):
+- **UFC 5:**
   - limite de FPS 60/120/144;
   - geração de quadros com o Lossless Scaling;
   - tela cheia na resolução do monitor;

@@ -1,4 +1,4 @@
-# Cage Launcher 2.7
+# Cage Launcher 1.0
 
 **Cage Launcher** é um launcher para jogar no PC os ports de **EA SPORTS UFC 1, 2, 3, 4 (PS4) e UFC 5
 (PS5)**. Ele acha o jogo, lê o seu PC e escolhe as melhores configurações para cada UFC sozinho.
@@ -15,8 +15,8 @@
 
 | Arquivo | Para quem |
 |---|---|
-| `CageLauncher-2.7-Windows-x64.zip` | Windows 10 (1903+) e 11, 64 bits. Inclui o modo Intel Arc. |
-| `CageLauncher-2.7-Linux-x64.tar.gz` | Linux e Steam Deck, pelo Wine ou pelo Proton. É o mesmo pacote com o `cage.sh`. |
+| `CageLauncher-1.0-Windows-x64.zip` | Windows 10 (1903+) e 11, 64 bits. Inclui o modo Intel Arc. |
+| `CageLauncher-1.0-Linux-x64.tar.gz` | Linux e Steam Deck, pelo Wine ou pelo Proton. É o mesmo pacote com o `cage.sh`. |
 
 **Placas Intel Arc:** não precisa de download separado. O Cage Launcher reconhece a placa Arc e liga o
 modo Intel Arc sozinho (veja [Intel Arc](#intel-arc)).
@@ -103,8 +103,8 @@ Saves, configurações e logs:
 ## Como usar — Linux e Steam Deck
 
 ```bash
-tar xf CageLauncher-2.7-Linux-x64.tar.gz
-cd CageLauncher-2.7
+tar xf CageLauncher-1.0-Linux-x64.tar.gz
+cd CageLauncher-1.0
 bash cage.sh             # abre o Cage Launcher
 bash cage.sh --install   # coloca o Cage Launcher no menu de aplicativos
 ```

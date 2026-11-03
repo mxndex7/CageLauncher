@@ -1,5 +1,5 @@
 /*
- * CAGE LAUNCHER 2.7
+ * CAGE LAUNCHER 1.0
  * One launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5.
  * Game list on the left, GAME / VIDEO / GAMEPLAY options and PLAY on the right.
  *  - UFC 1-4: options are written to %LOCALAPPDATA%\UFCnNative\sacredfire.ini (the ports' own file),
@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define APP_VER L"2.7"
+#define APP_VER L"1.0"
 #define WM_APP_EXITED (WM_APP + 1)
 #define WM_APP_FROZEN (WM_APP + 2)
 #define WM_APP_AUTOCFG (WM_APP + 3)
@@ -84,6 +84,7 @@ int WINAPI GdipDisposeImage(GpImage *);
 #define C_SUB     RGB(138, 138, 147)  /* texto secundário */
 #define C_ACCENT  RGB(210, 10, 10)    /* vermelho UFC */
 #define C_ACCHOT  RGB(229, 37, 42)    /* acento em hover */
+#define C_ACCDOWN RGB(168, 8, 8)      /* acento pressionado */
 #define C_GOOD    RGB(76, 195, 138)   /* bom / rodando */
 #define C_ORANGE  RGB(240, 160, 32)   /* aviso (âmbar) */
 #define C_BAD     RGB(255, 107, 94)   /* erro: coral, diferente do acento */
@@ -189,6 +190,7 @@ static const Field SW5[6] = {{S_FULL, L"fullscreen", NULL, 0, 1, TRUE}, {S_FASTS
 static HINSTANCE g_inst;
 static HWND g_wnd, g_editGame, g_editPlayer;
 static int g_dpi = 96, g_sel = 4, g_hot = -1;
+static int g_menuOpen = -1, g_down = -1;   /* só para o desenho: dropdown com o menu aberto, JOGAR pressionado */
 static HFONT g_fTitle, g_fCard, g_fText, g_fSmall, g_fSection, g_fPlay, g_fBtn, g_fFoot, g_fLabel, g_fTag, g_fLogo, g_fLogoSub;
 static HBRUSH g_brField;
 static wchar_t g_exeDir[MAX_PATH], g_pIni[MAX_PATH], g_msg[512];
@@ -441,7 +443,7 @@ static void Dropdown(HDC dc, GpGraphics *g, int x, int y, int w, const Field *f,
     Text(dc, g_fLabel, C_SUB, SC(x), SC(y), T(f->label));
     RECT r = {SC(x), SC(y + 20), SC(x + w), SC(y + 56)};
     BOOL hot = g_hot == id;
-    Box(g, r, SC(2), A(C_FIELD, 255), A(hot ? C_FIELDH : C_FIELDB, 255), 1.0f);
+    Box(g, r, SC(2), A(C_FIELD, 255), A(g_menuOpen == id ? C_ACCENT : hot ? C_FIELDH : C_FIELDB, 255), 1.0f);
     int v = GetInt(g_sel, f->key, f->def), i = OptIndex(f, v);
     wchar_t custom[32]; const wchar_t *name = i >= 0 ? OptName(&f->opts[i]) : (_snwprintf(custom, 32, L"%d", v), custom);
     RECT tr = {r.left + SC(14), r.top, r.right - SC(36), r.bottom}; TextR(dc, g_fText, C_TEXT, tr, name, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
@@ -475,8 +477,8 @@ static void PlayButton(HDC dc, GpGraphics *g, RECT r)
 {
     BOOL hot = g_hot == H_PLAY, can = Status(g_sel) == S_READY || g_proc;
     const wchar_t *t = g_proc ? T(S_STOP) : T(S_PLAY); COLORREF tc;
-    if (g_proc) { Box(g, r, SC(2), A(hot ? C_ROWSEL : C_BG, 255), A(C_TEXT, 255), 1.0f); tc = C_TEXT; }   /* PARAR: contorno branco, nunca vermelho sólido */
-    else if (can) { Box(g, r, SC(2), A(hot ? C_ACCHOT : C_ACCENT, 255), 0, 0); tc = RGB(255, 255, 255); }
+    if (g_proc) { Box(g, r, SC(2), A(g_down == H_PLAY ? C_OFF : hot ? C_ROWSEL : C_BG, 255), A(C_TEXT, 255), 1.0f); tc = C_TEXT; }   /* PARAR: contorno branco, nunca vermelho sólido */
+    else if (can) { Box(g, r, SC(2), A(g_down == H_PLAY ? C_ACCDOWN : hot ? C_ACCHOT : C_ACCENT, 255), 0, 0); tc = RGB(255, 255, 255); }
     else { Box(g, r, SC(2), A(C_OFF, 255), 0, 0); tc = C_SUB; }
     SetTextCharacterExtra(dc, SC(3));
     if (g_proc) {   /* ícone de parar (quadrado) antes do texto */
@@ -1131,11 +1133,15 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
         if (h != g_hot) { g_hot = h; InvalidateRect(w, NULL, FALSE); TRACKMOUSEEVENT t = {sizeof(t), TME_LEAVE, w, 0}; TrackMouseEvent(&t); }
         return 0;
     }
-    case WM_MOUSELEAVE: if (g_hot != -1) { g_hot = -1; InvalidateRect(w, NULL, FALSE); } return 0;
+    case WM_MOUSELEAVE: if (g_hot != -1 || g_down != -1) { g_hot = -1; g_down = -1; InvalidateRect(w, NULL, FALSE); } return 0;
+    case WM_LBUTTONUP: if (g_down != -1) { g_down = -1; InvalidateRect(w, NULL, FALSE); } return 0;
+    case WM_ENTERMENULOOP: if (wp) { g_menuOpen = g_hot; InvalidateRect(w, NULL, FALSE); UpdateWindow(w); } break;   /* menu de um dropdown */
+    case WM_EXITMENULOOP: if (g_menuOpen != -1) { g_menuOpen = -1; InvalidateRect(w, NULL, FALSE); } break;
     case WM_SETCURSOR: if (LOWORD(lp) == HTCLIENT && g_hot >= 0) { SetCursor(LoadCursorW(NULL, (LPCWSTR)IDC_HAND)); return TRUE; } break;
     case WM_LBUTTONDOWN: {
         SetFocus(w);
         int h = HitAt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+        if (h == H_PLAY) { g_down = H_PLAY; InvalidateRect(w, NULL, FALSE); UpdateWindow(w); }   /* desenho pressionado até soltar o botão */
         if (h >= H_CARD && h < H_CARD + NGAMES) Select(h - H_CARD);
         else if (h >= H_DROP && h < H_DROP + 11) DropdownMenu(h - H_DROP);
         else if (h >= H_SWITCH && h < H_SWITCH + 6) ToggleSwitch(h - H_SWITCH);
@@ -1154,7 +1160,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
         }
         return 0;
     }
-    case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); InvalidateRect(w, NULL, FALSE); } return 0;
+    case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); InvalidateRect(w, NULL, FALSE); } else if (HIWORD(wp) == EN_SETFOCUS) InvalidateRect(w, NULL, FALSE); return 0;
     case WM_APP_EXITED: OnExited((DWORD)wp); return 0;
     case WM_APP_AUTOCFG:
         if (wp == 1 || g_autoDone4) {
@@ -1173,7 +1179,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
                             L"O %s travou (a GPU parou de responder). O diagnóstico foi salvo na pasta de logs (%s). Clique em PARAR para fechar.",
             G[wp < NGAMES ? wp : 0].name, PathFindFileNameW(g_frozenFile));
         InvalidateRect(w, NULL, FALSE); return 0;
-    case WM_ACTIVATE: if (LOWORD(wp) != WA_INACTIVE) { g_kvGame = -1; for (int i = 0; i < NGAMES; i++) ReadVersion(i); InvalidateRect(w, NULL, FALSE); } break;
+    case WM_ACTIVATE: g_down = -1; if (LOWORD(wp) != WA_INACTIVE) { g_kvGame = -1; for (int i = 0; i < NGAMES; i++) ReadVersion(i); InvalidateRect(w, NULL, FALSE); } break;
     case WM_DPICHANGED: {
         g_dpi = HIWORD(wp); MakeFonts();
         SendMessageW(g_editGame, WM_SETFONT, (WPARAM)g_fText, TRUE); SendMessageW(g_editPlayer, WM_SETFONT, (WPARAM)g_fText, TRUE);

@@ -1,10 +1,11 @@
+#pragma code_page(65001)
 #include <windows.h>
 1 ICON "app.ico"
 1 24 "app.manifest"
 101 RCDATA "logo.png"
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 2,7,0,0
-PRODUCTVERSION 2,7,0,0
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
 FILEOS 0x40004
 FILETYPE 0x1
 BEGIN
@@ -14,11 +15,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Cage Launcher"
       VALUE "FileDescription", "Cage Launcher: launcher dos ports para PC do UFC 1, 2, 3, 4 e 5"
-      VALUE "FileVersion", "2.7.0"
+      VALUE "FileVersion", "1.0.0"
       VALUE "ProductName", "Cage Launcher"
-      VALUE "ProductVersion", "2.7.0"
+      VALUE "ProductVersion", "1.0.0"
       VALUE "OriginalFilename", "CageLauncher.exe"
-      VALUE "LegalCopyright", "GPL-2.0-or-later. Sem afiliacao com a Electronic Arts, o UFC ou a Sony."
+      VALUE "LegalCopyright", "Copyright (c) 2026 Guilherme Mendes. Licença MIT. Sem afiliação com a Electronic Arts, o UFC ou a Sony."
     END
   END
   BLOCK "VarFileInfo"

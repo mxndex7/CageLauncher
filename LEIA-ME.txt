@@ -1,4 +1,4 @@
-CAGE LAUNCHER 2.7
+CAGE LAUNCHER 1.0
 =================
 
 PT  Abra o CageLauncher.exe e escolha um jogo na esquerda (UFC 1, 2, 3, 4 ou 5). Escolha a pasta do
