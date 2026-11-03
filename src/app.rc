@@ -2,7 +2,6 @@
 1 ICON "app.ico"
 1 24 "app.manifest"
 101 RCDATA "logo.png"
-102 RCDATA "background.png"
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION 2,7,0,0
 PRODUCTVERSION 2,7,0,0

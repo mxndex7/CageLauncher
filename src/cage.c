@@ -70,21 +70,23 @@ int WINAPI GdipDrawLineI(GpGraphics *, GpPen *, INT, INT, INT, INT);
 int WINAPI GdipDeleteGraphics(GpGraphics *);
 int WINAPI GdipDisposeImage(GpImage *);
 
-/* ---------------------------------------------------------------- look */
+/* ---------------------------------------------------------------- look: preto, branco e vermelho UFC */
 #define A(c, a) (((UINT32)(a) << 24) | ((UINT32)GetRValue(c) << 16) | ((UINT32)GetGValue(c) << 8) | (UINT32)GetBValue(c))
-#define C_BG      RGB(6, 8, 16)
-#define C_SIDE    RGB(5, 6, 12)
-#define C_TEXT    RGB(240, 242, 248)
-#define C_SUB     RGB(150, 160, 185)
-#define C_CYAN    RGB(28, 168, 255)
-#define C_PURPLE  RGB(150, 70, 255)
-#define C_ORANGE  RGB(255, 160, 20)
-#define C_FIELD   RGB(14, 18, 30)
-#define C_FIELDB  RGB(44, 52, 78)
-#define C_CARD    RGB(12, 15, 26)
-#define C_CARDB   RGB(36, 44, 68)
-#define C_GOOD    RGB(80, 210, 140)
-#define C_BAD     RGB(255, 100, 90)
+#define C_BG      RGB(10, 10, 12)     /* fundo da janela */
+#define C_SIDE    RGB(17, 17, 19)     /* superfície: sidebar */
+#define C_FIELD   RGB(17, 17, 19)     /* superfície: campos e dropdowns */
+#define C_FIELDB  RGB(38, 38, 43)     /* borda de 1px e divisores */
+#define C_FIELDH  RGB(58, 58, 66)     /* borda em hover */
+#define C_ROWHOT  RGB(23, 23, 26)     /* linha de jogo em hover */
+#define C_ROWSEL  RGB(28, 28, 32)     /* linha de jogo selecionada */
+#define C_OFF     RGB(40, 40, 46)     /* trilho do switch desligado, JOGAR desabilitado */
+#define C_TEXT    RGB(242, 242, 242)
+#define C_SUB     RGB(138, 138, 147)  /* texto secundário */
+#define C_ACCENT  RGB(210, 10, 10)    /* vermelho UFC */
+#define C_ACCHOT  RGB(229, 37, 42)    /* acento em hover */
+#define C_GOOD    RGB(76, 195, 138)   /* bom / rodando */
+#define C_ORANGE  RGB(240, 160, 32)   /* aviso (âmbar) */
+#define C_BAD     RGB(255, 107, 94)   /* erro: coral, diferente do acento */
 
 #define BASE_W 1180
 #define BASE_H 704
@@ -183,12 +185,12 @@ static const Field SW5[6] = {{S_FULL, L"fullscreen", NULL, 0, 1, TRUE}, {S_FASTS
 static HINSTANCE g_inst;
 static HWND g_wnd, g_editGame, g_editPlayer;
 static int g_dpi = 96, g_sel = 4, g_hot = -1;
-static HFONT g_fTitle, g_fCard, g_fText, g_fSmall, g_fSection, g_fPlay, g_fBtn, g_fFoot;
+static HFONT g_fTitle, g_fCard, g_fText, g_fSmall, g_fSection, g_fPlay, g_fBtn, g_fFoot, g_fLabel, g_fTag, g_fLogo, g_fLogoSub;
 static HBRUSH g_brField;
 static wchar_t g_exeDir[MAX_PATH], g_pIni[MAX_PATH], g_msg[512];
 static COLORREF g_msgColor = C_SUB;
 static ULONG_PTR g_gdip;
-static GpImage *g_imgBg, *g_imgLogo;
+static GpImage *g_imgLogo;
 static HBITMAP g_bgCache; static int g_bgW, g_bgH;
 static HANDLE g_job, g_proc; static int g_procGame = -1;
 static wchar_t g_ver[NGAMES][48];
@@ -346,21 +348,11 @@ static void BuildBg(int w, int h)
     g_bgCache = CreateCompatibleBitmap(wdc, w, h); g_bgW = w; g_bgH = h;
     HGDIOBJ o = SelectObject(dc, g_bgCache);
     HBRUSH b = CreateSolidBrush(C_BG); RECT r = {0, 0, w, h}; FillRect(dc, &r, b); DeleteObject(b);
+    b = CreateSolidBrush(C_SIDE); RECT s = {0, 0, SC(SIDE_W), h}; FillRect(dc, &s, b); DeleteObject(b);          /* sidebar sólida */
+    b = CreateSolidBrush(C_FIELDB); RECT d = {SC(SIDE_W), 0, SC(SIDE_W) + 1, h}; FillRect(dc, &d, b); DeleteObject(b);   /* divisor de 1px */
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g);
     if (g) {
         GdipSetInterpolationMode(g, 7); GdipSetSmoothingMode(g, 4);
-        if (g_imgBg) {   /* cover crop */
-            UINT iw = 0, ih = 0; GdipGetImageWidth(g_imgBg, &iw); GdipGetImageHeight(g_imgBg, &ih);
-            int sw = iw, sh = (int)((double)iw * h / w); if (sh > (int)ih) { sh = ih; sw = (int)((double)ih * w / h); }
-            GdipDrawImageRectRectI(g, g_imgBg, 0, 0, w, h, (iw - sw) / 2, (ih - sh) / 2, sw, sh, 2, NULL, NULL, NULL);
-        }
-        GpBrush *side = NULL; GdipCreateSolidFill(A(C_SIDE, 235), &side);          /* darker sidebar */
-        if (side) { GdipFillRectangleI(g, side, 0, 0, SC(SIDE_W), h); GdipDeleteBrush(side); }
-        POINT a = {0, 0}, z = {0, h}; GpBrush *line = NULL;                        /* glowing divider */
-        GdipCreateLineBrushI(&a, &z, A(C_CYAN, 255), A(C_PURPLE, 255), 0, &line);
-        if (line) { GdipFillRectangleI(g, line, SC(SIDE_W), 0, SC(2), h); GdipDeleteBrush(line); }
-        GdipCreateLineBrushI(&a, &z, A(C_CYAN, 50), A(C_PURPLE, 50), 0, &line);
-        if (line) { GdipFillRectangleI(g, line, SC(SIDE_W) - SC(3), 0, SC(8), h); GdipDeleteBrush(line); }
         if (g_imgLogo) GdipDrawImageRectI(g, g_imgLogo, SC((SIDE_W - 232) / 2), SC(10), SC(232), SC(232));
         GdipDeleteGraphics(g);
     }
@@ -385,25 +377,23 @@ static void Box(GpGraphics *g, RECT r, int rad, UINT32 fill, UINT32 border, floa
     if (border) { GpPen *pen = NULL; GdipCreatePen1(border, bw, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); }
     GdipDeletePath(p);
 }
-static void GradBox(GpGraphics *g, RECT r, int rad, UINT32 c1, UINT32 c2, BOOL fill, float bw)
-{
-    POINT a = {r.left, r.top}, z = {r.right, r.top}; GpBrush *lb = NULL; GdipCreateLineBrushI(&a, &z, c1, c2, 0, &lb);
-    GpPath *p = RoundPath(r.left, r.top, r.right - r.left - 1, r.bottom - r.top - 1, rad);
-    if (fill) GdipFillPath(g, lb, p); else { GpPen *pen = NULL; GdipCreatePen2(lb, bw, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); }
-    GdipDeletePath(p); GdipDeleteBrush(lb);
-}
+static void Fill(GpGraphics *g, int x, int y, int w, int h, COLORREF c)
+{ GpBrush *b = NULL; GdipCreateSolidFill(A(c, 255), &b); GdipFillRectangleI(g, b, x, y, w, h); GdipDeleteBrush(b); }
 static void Text(HDC dc, HFONT f, COLORREF c, int x, int y, const wchar_t *s)
 { SelectObject(dc, f); SetTextColor(dc, c); TextOutW(dc, x, y, s, (int)wcslen(s)); }
 static void TextR(HDC dc, HFONT f, COLORREF c, RECT r, const wchar_t *s, UINT fl)
 { SelectObject(dc, f); SetTextColor(dc, c); DrawTextW(dc, s, -1, &r, fl | DT_SINGLELINE | DT_NOPREFIX); }
 static int TextW(HDC dc, HFONT f, const wchar_t *s) { SelectObject(dc, f); SIZE z; GetTextExtentPoint32W(dc, s, (int)wcslen(s), &z); return z.cx; }
+/* cópia em caixa alta (títulos, seções e botões em Bahnschrift) */
+static const wchar_t *Caps(wchar_t *out, int n, const wchar_t *s) { wcsncpy(out, s, n - 1); out[n - 1] = 0; CharUpperW(out); return out; }
 
 static void Section(HDC dc, GpGraphics *g, int y, const wchar_t *t)
-{
-    SetTextCharacterExtra(dc, SC(2)); int w = TextW(dc, g_fSection, t);
-    Text(dc, g_fSection, C_CYAN, SC(X0), SC(y), t); SetTextCharacterExtra(dc, 0);
-    GpPen *pen = NULL; GdipCreatePen1(A(C_FIELDB, 255), 1.0f, 2, &pen);
-    GdipDrawLineI(g, pen, SC(X0) + w + SC(14), SC(y + 9), SC(X1), SC(y + 9)); GdipDeletePen(pen);
+{   /* traço vermelho curto, rótulo em caixa alta e linha fina até a borda direita */
+    wchar_t u[64]; Caps(u, 64, t);
+    Fill(g, SC(X0), SC(y + 7), SC(14), SC(2), C_ACCENT);
+    SetTextCharacterExtra(dc, SC(2)); int w = TextW(dc, g_fSection, u);
+    Text(dc, g_fSection, C_TEXT, SC(X0 + 24), SC(y), u); SetTextCharacterExtra(dc, 0);
+    Fill(g, SC(X0 + 24) + w + SC(12), SC(y + 8), SC(X1) - (SC(X0 + 24) + w + SC(12)), 1, C_FIELDB);
 }
 
 /* ---------------------------------------------------------------- fields */
@@ -415,75 +405,71 @@ static const wchar_t *OptName(const Opt *o) { return g_lang ? o->en : o->pt; }
 
 static void Dropdown(HDC dc, GpGraphics *g, int x, int y, int w, const Field *f, int id)
 {
-    Text(dc, g_fText, C_SUB, SC(x), SC(y), T(f->label));
+    Text(dc, g_fLabel, C_SUB, SC(x), SC(y), T(f->label));
     RECT r = {SC(x), SC(y + 20), SC(x + w), SC(y + 56)};
     BOOL hot = g_hot == id;
-    Box(g, r, SC(5), A(C_FIELD, 255), A(hot ? C_CYAN : C_FIELDB, 255), 1.0f);
+    Box(g, r, SC(2), A(C_FIELD, 255), A(hot ? C_FIELDH : C_FIELDB, 255), 1.0f);
     int v = GetInt(g_sel, f->key, f->def), i = OptIndex(f, v);
     wchar_t custom[32]; const wchar_t *name = i >= 0 ? OptName(&f->opts[i]) : (_snwprintf(custom, 32, L"%d", v), custom);
-    RECT tr = {r.left + SC(16), r.top, r.right - SC(40), r.bottom}; TextR(dc, g_fText, C_TEXT, tr, name, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
-    GpPen *pen = NULL; GdipCreatePen1(A(C_CYAN, 255), (float)SC(2), 2, &pen);   /* chevron */
-    int cx = r.right - SC(22), cy = (r.top + r.bottom) / 2;
-    GdipDrawLineI(g, pen, cx - SC(6), cy - SC(3), cx, cy + SC(3)); GdipDrawLineI(g, pen, cx, cy + SC(3), cx + SC(6), cy - SC(3)); GdipDeletePen(pen);
+    RECT tr = {r.left + SC(14), r.top, r.right - SC(36), r.bottom}; TextR(dc, g_fText, C_TEXT, tr, name, DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
+    GpPen *pen = NULL; GdipCreatePen1(A(hot ? C_TEXT : C_SUB, 255), 1.5f * g_dpi / 96, 2, &pen);   /* chevron fino */
+    int cx = r.right - SC(18), cy = (r.top + r.bottom) / 2;
+    GdipDrawLineI(g, pen, cx - SC(4), cy - SC(2), cx, cy + SC(2)); GdipDrawLineI(g, pen, cx, cy + SC(2), cx + SC(4), cy - SC(2)); GdipDeletePen(pen);
     AddHit(r.left, r.top, r.right, r.bottom, id);
 }
 
 static void Switch(HDC dc, GpGraphics *g, int x, int y, const Field *f, int id)
-{
-    BOOL on = GetInt(g_sel, f->key, f->def) != 0;
-    RECT r = {SC(x), SC(y), SC(x + 46), SC(y + 24)};
-    if (on) GradBox(g, r, SC(12), A(C_CYAN, 255), A(C_PURPLE, 255), TRUE, 0);
-    else Box(g, r, SC(12), A(RGB(22, 26, 40), 255), A(C_FIELDB, 255), 1.0f);
-    GpBrush *k = NULL; GdipCreateSolidFill(on ? 0xFFFFFFFF : 0xFF7A8098, &k);
-    int kx = on ? r.right - SC(21) : r.left + SC(3); GdipFillEllipseI(g, k, kx, r.top + SC(3), SC(18), SC(18)); GdipDeleteBrush(k);
-    Text(dc, g_fText, C_TEXT, SC(x + 58), SC(y + 1), T(f->label));
-    AddHit(r.left, r.top, SC(x + 58) + TextW(dc, g_fText, T(f->label)), r.bottom, id);
+{   /* ligado: trilho vermelho e bolinha branca; desligado: trilho cinza escuro e bolinha cinza */
+    BOOL on = GetInt(g_sel, f->key, f->def) != 0, hot = g_hot == id;
+    RECT r = {SC(x), SC(y + 3), SC(x + 36), SC(y + 21)};
+    if (on) Box(g, r, SC(2), A(hot ? C_ACCHOT : C_ACCENT, 255), 0, 0);
+    else Box(g, r, SC(2), A(C_OFF, 255), A(hot ? C_FIELDH : C_FIELDB, 255), 1.0f);
+    int k = SC(12), ky = (r.top + r.bottom - k) / 2, kx = on ? r.right - SC(3) - k : r.left + SC(3);
+    RECT kr = {kx, ky, kx + k, ky + k}; Box(g, kr, SC(1), on ? 0xFFFFFFFF : A(hot ? C_SUB : RGB(100, 100, 108), 255), 0, 0);
+    Text(dc, g_fText, C_TEXT, SC(x + 48), SC(y + 2), T(f->label));
+    AddHit(r.left, SC(y), SC(x + 48) + TextW(dc, g_fText, T(f->label)), SC(y + 24), id);
 }
 
 static void Button(HDC dc, GpGraphics *g, RECT r, const wchar_t *t, int id)
-{
-    BOOL hot = g_hot == id;
-    Box(g, r, SC(4), A(RGB(10, 13, 24), 230), A(hot ? C_CYAN : C_FIELDB, 255), 1.0f);
-    SetTextCharacterExtra(dc, SC(1)); TextR(dc, g_fBtn, C_TEXT, r, t, DT_CENTER | DT_VCENTER); SetTextCharacterExtra(dc, 0);
+{   /* secundário: contorno de 1px, texto branco, borda branca em hover */
+    BOOL hot = g_hot == id; wchar_t u[64];
+    Box(g, r, SC(2), 0, A(hot ? C_TEXT : C_FIELDH, 255), 1.0f);
+    SetTextCharacterExtra(dc, SC(1)); TextR(dc, g_fBtn, C_TEXT, r, Caps(u, 64, t), DT_CENTER | DT_VCENTER); SetTextCharacterExtra(dc, 0);
     AddHit(r.left, r.top, r.right, r.bottom, id);
 }
 
 static void PlayButton(HDC dc, GpGraphics *g, RECT r)
 {
     BOOL hot = g_hot == H_PLAY, can = Status(g_sel) == S_READY || g_proc;
-    int cut = SC(18);   /* slanted corners */
-    GpPath *p = NULL; GdipCreatePath(0, &p);
-    GdipAddPathLineI(p, r.left + cut, r.top, r.right, r.top); GdipAddPathLineI(p, r.right, r.top, r.right, r.bottom - cut);
-    GdipAddPathLineI(p, r.right, r.bottom - cut, r.right - cut, r.bottom); GdipAddPathLineI(p, r.right - cut, r.bottom, r.left, r.bottom);
-    GdipAddPathLineI(p, r.left, r.bottom, r.left, r.top + cut); GdipClosePathFigure(p);
-    POINT a = {r.left, r.top}, z = {r.right, r.top}; GpBrush *lb = NULL;
-    COLORREF c1 = g_proc ? RGB(200, 40, 60) : C_CYAN, c2 = g_proc ? RGB(120, 30, 160) : C_PURPLE;
-    GdipCreateLineBrushI(&a, &z, A(c1, can ? (hot ? 255 : 235) : 90), A(c2, can ? (hot ? 255 : 235) : 90), 0, &lb);
-    GdipFillPath(g, lb, p); GdipDeleteBrush(lb); GdipDeletePath(p);
-    SetTextCharacterExtra(dc, SC(2)); TextR(dc, g_fPlay, can ? RGB(255, 255, 255) : RGB(160, 165, 180), r, g_proc ? T(S_STOP) : T(S_PLAY), DT_CENTER | DT_VCENTER); SetTextCharacterExtra(dc, 0);
+    const wchar_t *t = g_proc ? T(S_STOP) : T(S_PLAY); COLORREF tc;
+    if (g_proc) { Box(g, r, SC(2), A(hot ? C_ROWSEL : C_BG, 255), A(C_TEXT, 255), 1.0f); tc = C_TEXT; }   /* PARAR: contorno branco, nunca vermelho sólido */
+    else if (can) { Box(g, r, SC(2), A(hot ? C_ACCHOT : C_ACCENT, 255), 0, 0); tc = RGB(255, 255, 255); }
+    else { Box(g, r, SC(2), A(C_OFF, 255), 0, 0); tc = C_SUB; }
+    SetTextCharacterExtra(dc, SC(3));
+    if (g_proc) {   /* ícone de parar (quadrado) antes do texto */
+        int tw = TextW(dc, g_fPlay, t), q = SC(10), x = (r.left + r.right - tw - q - SC(14)) / 2;
+        Fill(g, x, (r.top + r.bottom - q) / 2, q, q, C_TEXT);
+        RECT tr = {x + q + SC(14), r.top, r.right, r.bottom}; TextR(dc, g_fPlay, tc, tr, t, DT_LEFT | DT_VCENTER);
+    } else TextR(dc, g_fPlay, tc, r, t, DT_CENTER | DT_VCENTER);
+    SetTextCharacterExtra(dc, 0);
     AddHit(r.left, r.top, r.right, r.bottom, H_PLAY);
 }
 
-static COLORREF StatusColor(int s) { return s == S_READY ? C_CYAN : s == S_RUNNING ? C_GOOD : s == S_PICK ? C_ORANGE : C_BAD; }
+static COLORREF StatusColor(int s) { return s == S_READY ? C_TEXT : s == S_RUNNING ? C_GOOD : s == S_PICK ? C_ORANGE : C_BAD; }
 
 static void Card(HDC dc, GpGraphics *g, int i, int y)
-{
-    RECT r = {SC(24), SC(y), SC(SIDE_W - 24), SC(y + 62)};
+{   /* linha plana: selecionada = barra vermelha de 3px + fundo mais claro; hover = fundo mais claro */
+    RECT r = {0, SC(y), SC(SIDE_W), SC(y + 62)};
     BOOL sel = i == g_sel, hot = g_hot == H_CARD + i;
-    Box(g, r, SC(6), A(sel ? RGB(14, 18, 36) : C_CARD, 225), sel ? 0 : A(hot ? RGB(70, 90, 140) : C_CARDB, 255), 1.0f);
-    if (sel) GradBox(g, r, SC(6), A(C_CYAN, 255), A(C_PURPLE, 255), FALSE, (float)SC(2));
-    Text(dc, g_fCard, C_TEXT, r.left + SC(20), r.top + SC(6), G[i].name);
-    int st = Status(i); COLORREF sc = StatusColor(st);
-    GpBrush *b = NULL; GdipCreateSolidFill(A(sc, 255), &b); GdipFillRectangleI(g, b, r.left + SC(20), r.top + SC(42), SC(8), SC(8)); GdipDeleteBrush(b);
-    Text(dc, g_fSmall, sc, r.left + SC(36), r.top + SC(36), T(st));
-    if (G[i].ps5 && st != S_NOPORT) {   /* small "NOVO" tag on the newest port */
-        RECT t = {r.right - SC(62), r.top + SC(10), r.right - SC(16), r.top + SC(28)};
-        GradBox(g, t, SC(4), A(C_CYAN, 255), A(C_PURPLE, 255), TRUE, 0); TextR(dc, g_fFoot, RGB(255, 255, 255), t, g_lang ? L"NEW" : L"NOVO", DT_CENTER | DT_VCENTER);
-    }
-    if (sel) {   /* chevron */
-        GpPen *pen = NULL; GdipCreatePen1(A(C_CYAN, 255), (float)SC(2), 2, &pen);
-        int cx = r.right - SC(26), cy = (r.top + r.bottom) / 2 + SC(6);
-        GdipDrawLineI(g, pen, cx - SC(3), cy - SC(6), cx + SC(3), cy); GdipDrawLineI(g, pen, cx + SC(3), cy, cx - SC(3), cy + SC(6)); GdipDeletePen(pen);
+    if (sel || hot) Fill(g, r.left, r.top, r.right - r.left, r.bottom - r.top, sel ? C_ROWSEL : C_ROWHOT);
+    if (sel) Fill(g, r.left, r.top, SC(3), r.bottom - r.top, C_ACCENT);
+    Text(dc, g_fCard, C_TEXT, SC(28), r.top + SC(10), G[i].name);
+    int st = Status(i);
+    Fill(g, SC(29), r.top + SC(41), SC(6), SC(6), StatusColor(st));
+    Text(dc, g_fSmall, C_SUB, SC(42), r.top + SC(35), T(st));
+    if (G[i].ps5 && st != S_NOPORT) {   /* tag "NOVO" do port mais recente: texto pequeno vermelho */
+        const wchar_t *tag = g_lang ? L"NEW" : L"NOVO";
+        SetTextCharacterExtra(dc, SC(1)); Text(dc, g_fTag, C_ACCENT, SC(SIDE_W - 24) - TextW(dc, g_fTag, tag), r.top + SC(15), tag); SetTextCharacterExtra(dc, 0);
     }
     AddHit(r.left, r.top, r.right, r.bottom, H_CARD + i);
 }
@@ -502,22 +488,21 @@ static void Paint(HDC wdc)
     int fy = BASE_H - 44;
     Text(dc, g_fFoot, g_hot == H_ABOUT ? C_TEXT : C_SUB, SC(30), SC(fy), T(S_ABOUT)); AddHit(SC(24), SC(fy - 4), SC(90), SC(fy + 22), H_ABOUT);
     Text(dc, g_fFoot, C_SUB, SC(150), SC(fy), L"v" APP_VER);
-    Text(dc, g_fFoot, g_lang == 1 ? C_CYAN : C_SUB, SC(222), SC(fy), L"EN"); AddHit(SC(216), SC(fy - 4), SC(246), SC(fy + 22), H_EN);
-    Text(dc, g_fFoot, g_lang == 0 ? C_CYAN : C_SUB, SC(258), SC(fy), L"PT-BR"); AddHit(SC(252), SC(fy - 4), SC(306), SC(fy + 22), H_PT);
+    Text(dc, g_fFoot, g_lang == 1 ? C_TEXT : C_SUB, SC(222), SC(fy), L"EN"); AddHit(SC(216), SC(fy - 4), SC(246), SC(fy + 22), H_EN);
+    Text(dc, g_fFoot, g_lang == 0 ? C_TEXT : C_SUB, SC(258), SC(fy), L"PT-BR"); AddHit(SC(252), SC(fy - 4), SC(306), SC(fy + 22), H_PT);
 
     /* title, subtitle and status pill */
     int gsel = g_sel, st = Status(gsel);
-    Text(dc, g_fTitle, RGB(255, 255, 255), SC(X0), SC(18), G[gsel].name);
+    Text(dc, g_fTitle, C_TEXT, SC(X0), SC(18), G[gsel].name);
     wchar_t sub[128]; _snwprintf(sub, 128, L"%s - %s", G[gsel].ps5 ? T(S_PS5PORT) : T(S_NATIVE), g_ver[gsel][0] ? g_ver[gsel] : L"?");
     Text(dc, g_fText, C_SUB, SC(X0 + 2), SC(84), sub);
-    { int pw = TextW(dc, g_fText, T(st)) + SC(46); RECT p = {SC(X1) - pw, SC(30), SC(X1), SC(64)};
-      COLORREF c = StatusColor(st); Box(g, p, SC(3), A(RGB(6, 10, 22), 220), A(c, 255), 1.5f);
-      GpBrush *b = NULL; GdipCreateSolidFill(A(c, 255), &b); GdipFillRectangleI(g, b, p.left + SC(16), (p.top + p.bottom) / 2 - SC(4), SC(8), SC(8)); GdipDeleteBrush(b);
-      RECT t = {p.left + SC(32), p.top, p.right - SC(10), p.bottom}; TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
+    { int tw = TextW(dc, g_fText, T(st)); RECT t = {SC(X1) - tw, SC(30), SC(X1), SC(64)};
+      COLORREF c = StatusColor(st); Fill(g, t.left - SC(18), (t.top + t.bottom) / 2 - SC(4), SC(8), SC(8), c);
+      TextR(dc, g_fText, c, t, T(st), DT_LEFT | DT_VCENTER); }
 
     /* GAME */
     Section(dc, g, 114, T(S_GAME));
-    RECT fr = {SC(X0), SC(138), SC(X1 - 186), SC(174)}; Box(g, fr, SC(5), A(C_FIELD, 255), A(C_FIELDB, 255), 1.0f);
+    RECT fr = {SC(X0), SC(138), SC(X1 - 186), SC(174)}; Box(g, fr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editGame ? C_ACCENT : C_FIELDB, 255), 1.0f);
     MoveWindow(g_editGame, fr.left + SC(16), fr.top + SC(9), fr.right - fr.left - SC(28), SC(20), FALSE);
     RECT br = {SC(X1 - 172), SC(138), SC(X1), SC(174)}; Button(dc, g, br, T(S_BROWSE), H_BROWSE);
     wchar_t pd[MAX_PATH], line[MAX_PATH + 64]; PortDir(gsel, pd);
@@ -536,7 +521,7 @@ static void Paint(HDC wdc)
     Dropdown(dc, g, X0, 454, 300, &gp[0], H_DROP + 9);
     Dropdown(dc, g, X0 + 316, 454, 156, &gp[1], H_DROP + 10);
     Text(dc, g_fText, C_SUB, SC(X0 + 488), SC(454), T(S_PLAYER));
-    RECT nr = {SC(X0 + 488), SC(474), SC(X1), SC(510)}; Box(g, nr, SC(5), A(C_FIELD, 255), A(C_FIELDB, 255), 1.0f);
+    RECT nr = {SC(X0 + 488), SC(474), SC(X1), SC(510)}; Box(g, nr, SC(2), A(C_FIELD, 255), A(GetFocus() == g_editPlayer ? C_ACCENT : C_FIELDB, 255), 1.0f);
     MoveWindow(g_editPlayer, nr.left + SC(16), nr.top + SC(9), nr.right - nr.left - SC(28), SC(20), FALSE);
     int ns; const Field *sw = Sw(gsel, &ns);
     static const int sx[3] = {X0, X0 + 266, X0 + 530};
@@ -1088,9 +1073,11 @@ static void ToggleSwitch(int idx)
 static void MakeFonts(void)
 {
     #define F(h, w, face) CreateFontW(-SC(h), 0, 0, 0, w, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, face)
-    g_fTitle = F(52, FW_BOLD, L"Bahnschrift"); g_fCard = F(26, FW_BOLD, L"Bahnschrift");
-    g_fText = F(16, FW_NORMAL, L"Segoe UI"); g_fSmall = F(14, FW_NORMAL, L"Segoe UI"); g_fSection = F(14, FW_BOLD, L"Bahnschrift");
-    g_fPlay = F(30, FW_BOLD, L"Bahnschrift"); g_fBtn = F(17, FW_BOLD, L"Bahnschrift"); g_fFoot = F(15, FW_NORMAL, L"Segoe UI");
+    g_fTitle = F(46, FW_BOLD, L"Bahnschrift"); g_fCard = F(20, FW_SEMIBOLD, L"Bahnschrift");
+    g_fText = F(15, FW_NORMAL, L"Segoe UI"); g_fSmall = F(13, FW_NORMAL, L"Segoe UI"); g_fSection = F(13, FW_SEMIBOLD, L"Bahnschrift");
+    g_fPlay = F(24, FW_BOLD, L"Bahnschrift"); g_fBtn = F(14, FW_SEMIBOLD, L"Bahnschrift"); g_fFoot = F(13, FW_NORMAL, L"Bahnschrift");
+    g_fLabel = F(13, FW_NORMAL, L"Bahnschrift"); g_fTag = F(11, FW_BOLD, L"Bahnschrift");
+    g_fLogo = F(50, FW_BOLD, L"Bahnschrift"); g_fLogoSub = F(13, FW_SEMIBOLD, L"Bahnschrift");
 }
 
 static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
@@ -1186,7 +1173,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     wchar_t selId[16]; GetPrivateProfileStringW(L"CAGE", L"selected_game", L"UFC5", selId, 16, g_pIni);
     for (int i = 0; i < NGAMES; i++) { ReadVersion(i); if (!_wcsicmp(selId, G[i].id)) g_sel = i; }
 
-    g_imgBg = LoadPngRes(102); g_imgLogo = LoadPngRes(101);
+    g_imgLogo = LoadPngRes(101);
     g_brField = CreateSolidBrush(C_FIELD);
 
     WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"CageLauncher";
@@ -1207,7 +1194,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     HWND w = CreateWindowExW(0, wc.lpszClassName, L"CAGE LAUNCHER", style,
                              mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - ww) / 2, mi.rcWork.top + max(0, (wah - wh) / 2), ww, wh, NULL, NULL, inst, NULL);
     BOOL dark = TRUE; DwmSetWindowAttribute(w, 20, &dark, sizeof(dark));
-    COLORREF cap = RGB(8, 10, 18); DwmSetWindowAttribute(w, 35 /* DWMWA_CAPTION_COLOR */, &cap, sizeof(cap));
+    COLORREF cap = C_BG; DwmSetWindowAttribute(w, 35 /* DWMWA_CAPTION_COLOR */, &cap, sizeof(cap));
     g_editGame = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 0, 0, 10, 10, w, (HMENU)300, inst, NULL);
     g_editPlayer = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 0, 0, 10, 10, w, (HMENU)301, inst, NULL);
     SendMessageW(g_editGame, WM_SETFONT, (WPARAM)g_fText, TRUE); SendMessageW(g_editPlayer, WM_SETFONT, (WPARAM)g_fText, TRUE);
