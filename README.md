@@ -138,9 +138,9 @@ bash cage.sh --install   # coloca o Cage Launcher no menu de aplicativos
 
 ## Código-fonte e licenças
 
-- `CageLauncher.exe` (`src/`) e o launcher do UFC 5 (`games/UFC5/src/`) estão em C/Win32, sob
-  GPL-2.0-or-later. Para compilar, rode o `build.sh` com o llvm-mingw.
-- Os ports do UFC 1–4 são GPL-2.0-or-later. Eles se baseiam em:
+- `CageLauncher.exe` (`src/`) e o launcher do UFC 5 (`games/UFC5/src/`) estão em C/Win32, sob a
+  licença MIT, Copyright (c) 2026 Guilherme Mendes (arquivo `LICENSE`). Para compilar, rode o `build.sh` com o llvm-mingw.
+- Os ports do UFC 1–4 continuam GPL-2.0-or-later, a licença dos projetos em que se baseiam:
   - [SacredFire](https://github.com/T3CHNOLOG1C/SacredFire);
   - [bbport](https://github.com/deadinside28/bloodborne_pc);
   - [shadPS4](https://github.com/shadps4-emu/shadPS4);
@@ -187,5 +187,6 @@ No game files are included: you need your own dump of each game.
   - UFC 5 under Wine is experimental: the emulator needs Windows memory APIs that Wine 9 lacks.
   - For a native UFC 3 build, see GNSB's repository.
 
-Licenses: GPL-2.0-or-later (Cage Launcher, the UFC 1–4 ports), GPL-2.0 (KytyPS5). Third-party licenses
+Licenses: MIT (Cage Launcher, Copyright (c) 2026 Guilherme Mendes), GPL-2.0-or-later (the UFC 1–4
+ports), GPL-2.0 (KytyPS5). Third-party licenses
 are in each `licenses` folder.

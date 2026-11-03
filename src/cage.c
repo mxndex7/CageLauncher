@@ -6,7 +6,7 @@
  *    the port is started as games\UFCn\UFCn.exe --play.
  *  - UFC 5: options are written to games\UFC5\UFC5.ini, the port is started as UFC5.exe --play.
  * The whole window is drawn by hand (no themed controls) except the two text fields.
- * Win32 + GDI/GDI+, no dependencies beyond Windows itself. GPL-2.0-or-later.
+ * Win32 + GDI/GDI+, no dependencies beyond Windows itself. MIT license, Copyright (c) 2026 Guilherme Mendes (LICENSE).
  */
 #ifndef UNICODE
 #define UNICODE
@@ -1020,10 +1020,10 @@ static void About(void)
     MessageBoxW(g_wnd, g_lang ?
         L"CAGE LAUNCHER " APP_VER L"\n\nOne launcher for the PC ports of EA SPORTS UFC, UFC 2, UFC 3, UFC 4 and UFC 5.\n\n"
         L"The ports are built on open-source projects: SacredFire / bbport (GNSB), shadPS4, KytyPS5 and the libraries listed in each port's licenses folder. "
-        L"GPL-2.0-or-later, source code in the src folder.\n\nNot affiliated with Electronic Arts, the UFC or Sony. You need your own copy of each game." :
+        L"Each port keeps its own license. Cage Launcher: MIT license, Copyright (c) 2026 Guilherme Mendes, source code in the src folder.\n\nNot affiliated with Electronic Arts, the UFC or Sony. You need your own copy of each game." :
         L"CAGE LAUNCHER " APP_VER L"\n\nUm launcher para os ports para PC do EA SPORTS UFC, UFC 2, UFC 3, UFC 4 e UFC 5.\n\n"
         L"Os ports são feitos sobre projetos de código aberto: SacredFire / bbport (GNSB), shadPS4, KytyPS5 e as bibliotecas listadas na pasta licenses de cada port. "
-        L"GPL-2.0-or-later, código-fonte na pasta src.\n\nSem afiliação com a Electronic Arts, o UFC ou a Sony. É preciso ter a sua própria cópia de cada jogo.",
+        L"Cada port mantém a própria licença. Cage Launcher: licença MIT, Copyright (c) 2026 Guilherme Mendes, código-fonte na pasta src.\n\nSem afiliação com a Electronic Arts, o UFC ou a Sony. É preciso ter a sua própria cópia de cada jogo.",
         L"CAGE LAUNCHER", MB_OK | MB_ICONINFORMATION);
 }
 

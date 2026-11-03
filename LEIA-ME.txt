@@ -29,4 +29,4 @@ EN  Open CageLauncher.exe, pick a game on the left, choose your game dump folder
     fullscreen that always uses the monitor's resolution. In UFC 5, "Advanced settings" opens a
     menu with the port's own window, a one-session full diagnostic and Lossless Scaling.
 
-Código-fonte: src\ (C/Win32). GPL-2.0-or-later. Sem afiliação com a Electronic Arts, o UFC ou a Sony.
+Código-fonte: src\ (C/Win32). Licença MIT (arquivo LICENSE). Sem afiliação com a Electronic Arts, o UFC ou a Sony.

@@ -136,7 +136,7 @@ Problemas
 - Travou carregando: teste o "PlayGo hack".
 - Com 120/144 o round fica acelerado: volte o Limite de FPS para 60.
 
-Código-fonte: src\ (launcher em C/Win32, GPL-2.0-or-later, como o Cage Launcher).
+Código-fonte: src\ (launcher em C/Win32, licença MIT, como o Cage Launcher).
 Motor: KytyPS5, GPL-2.0 (bin\LICENSE-GPL-2.0.txt, bin\README-motor-KytyPS5.txt).
 Lossless Scaling é um programa pago e separado, da Steam. O port só o abre e aperta o atalho dele.
 Não é afiliado à Electronic Arts, ao UFC nem à Sony. Você precisa da sua própria cópia do jogo.

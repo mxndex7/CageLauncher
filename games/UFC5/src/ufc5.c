@@ -2,7 +2,7 @@
  * Cage Launcher - UFC 5 port
  * Starts EA SPORTS UFC 5 (PS5, PPSA03541) through the bundled KytyPS5 (UFC 5 build) emulator with
  * performance-oriented settings. All of the emulator's command-line options are exposed here.
- * Win32, no dependencies beyond Windows itself. GPL-2.0-or-later, like Cage Launcher.
+ * Win32, no dependencies beyond Windows itself. MIT license, like Cage Launcher (Copyright (c) 2026 Guilherme Mendes).
  */
 #ifndef UNICODE
 #define UNICODE
