@@ -15,7 +15,7 @@ próprio dump. O que mudou nesta versão: `RELEASE-NOTES.md`.
 ## Como jogar
 
 1. Extraia esta pasta em qualquer lugar (fora da pasta do jogo e fora do OneDrive), ou use o
-   launcher PORTHEON.
+   Cage Launcher.
 2. Abra **`UFC3.exe`**, clique em **Browse...**, escolha a pasta do UFC 3 e aperte **Play**.
 3. Dados, saves e logs ficam em `%LOCALAPPDATA%\UFC3Native` (os mesmos das versões anteriores).
 4. Dois jogadores: conecte dois controles (também dois controles iguais e pelo Parsec); cada
@@ -35,7 +35,7 @@ mistura para 2 canais sem abaixar vozes e narração. Se ainda quiser mais alto 
 O port usa Vulkan e funciona com o ReShade (https://reshade.me):
 
 1. Rode o instalador do ReShade e escolha o executável **`bin\sacredfire-game.exe`** dentro da
-   pasta do port (`UFC3.exe` é só o launcher; no PORTHEON: `games\UFC3\bin\sacredfire-game.exe`).
+   pasta do port (`UFC3.exe` é só o launcher; no Cage Launcher: `games\UFC3\bin\sacredfire-game.exe`).
 2. Em "rendering API" escolha **Vulkan**, e depois os efeitos que quiser.
 3. Abra o jogo pelo launcher como sempre; **Home** abre o menu do ReShade.
 

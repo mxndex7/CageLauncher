@@ -1,6 +1,6 @@
 # UFC 4 native port 0.2.0
 
-## 0.2.6 (PORTHEON 1.6)
+## 0.2.6
 
 - **Safer texture copies:** every image copy, upload and tiling pass is checked against its
   textures and buffers before it reaches the graphics card (the fix for UFC 2's Create
@@ -10,19 +10,19 @@
   ("Patches da comunidade") to turn one on.
 - Better crash reports: a GPU loss now names the texture involved.
 
-## 0.2.5 (PORTHEON 1.5)
+## 0.2.5
 
-- **Auto settings:** on the first start PORTHEON reads your PC (graphics card and its memory,
+- **Auto settings:** on the first start Cage Launcher reads your PC (graphics card and its memory,
   processor threads, RAM, monitor) and picks this game's settings. The new **Auto settings**
   button does it again any time. FSR stays off (native port: not needed); PS4 Pro mode only on
   strong NVIDIA / AMD cards.
 - **UFC 4 first-start defaults:** 60 FPS (higher rates can break UFC 4), Mailbox, no sharpening.
 
-## 0.2.4 (PORTHEON 1.4)
+## 0.2.4
 
 - **Louder, clearer sound.** The game mixes 7.1; on headphones and stereo speakers the port now
   folds it to 2 channels itself, without the attenuation that made voices and commentary quiet.
-  New **Volume** setting (50% to 300%) in the launcher and PORTHEON, with a limiter against
+  New **Volume** setting (50% to 300%) in the launcher and Cage Launcher, with a limiter against
   clipping.
 - **Steam Deck (Linux):** a Deck profile, on by default there: 1280x720 with FSR 1.0 to the
   800p screen, 2 frames queued (fewer stutters with the CPU and GPU at full clocks), 60 FPS cap.

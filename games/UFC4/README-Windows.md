@@ -45,7 +45,7 @@ mistura para 2 canais sem abaixar vozes e narração. Se ainda quiser mais alto 
 O port usa Vulkan e funciona com o ReShade (https://reshade.me):
 
 1. Rode o instalador do ReShade e escolha o executável **`bin\sacredfire-game.exe`** dentro da
-   pasta do port (`UFC4.exe` é só o launcher; no PORTHEON: `games\UFC4\bin\sacredfire-game.exe`).
+   pasta do port (`UFC4.exe` é só o launcher; no Cage Launcher: `games\UFC4\bin\sacredfire-game.exe`).
 2. Em "rendering API" escolha **Vulkan**, e depois os efeitos que quiser.
 3. Abra o jogo pelo launcher como sempre; **Home** abre o menu do ReShade.
 

@@ -106,7 +106,7 @@ def locate(line, offset, elf):
 
 
 def find_mask(line, elf):
-    """portheon: the image offset of a "mask" line's pattern (shadPS4 / community patches)."""
+    """Cage Launcher: the image offset of a "mask" line's pattern (shadPS4 / community patches)."""
     rx=signature_regex(line.get('Address') or '')
     for start,pos,size in load_segments(elf):
         m=rx.search(elf,pos,pos+size)

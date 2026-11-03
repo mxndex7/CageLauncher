@@ -1,6 +1,6 @@
-# UFC 3 native port 0.1.7 (PORTHEON)
+# UFC 3 native port 0.1.7 (Cage Launcher)
 
-## 0.1.12 (PORTHEON 1.6)
+## 0.1.12
 
 - **Safer texture copies:** every image copy, upload and tiling pass is checked against its
   textures and buffers before it reaches the graphics card (the fix for UFC 2's Create
@@ -10,9 +10,9 @@
   ("Patches da comunidade") to turn one on.
 - Better crash reports: a GPU loss now names the texture involved.
 
-## 0.1.11 (PORTHEON 1.5)
+## 0.1.11
 
-- **Auto settings:** on the first start PORTHEON reads your PC (graphics card and its memory,
+- **Auto settings:** on the first start Cage Launcher reads your PC (graphics card and its memory,
   processor threads, RAM, monitor) and picks this game's settings. The new **Auto settings**
   button does it again any time. FSR stays off (native port: not needed); PS4 Pro mode only on
   strong NVIDIA / AMD cards.
@@ -21,11 +21,11 @@
   carrier-grade NAT) the launcher says so: use a VPN, or Parsec for local co-op over the Internet.
   See docs/ufc3/ONLINE-HOSTING.md.
 
-## 0.1.10 (PORTHEON 1.4)
+## 0.1.10
 
 - **Louder, clearer sound.** The game mixes 7.1; on headphones and stereo speakers the port now
   folds it to 2 channels itself, without the attenuation that made voices and commentary quiet.
-  New **Volume** setting (50% to 300%) in the launcher and PORTHEON, with a limiter against
+  New **Volume** setting (50% to 300%) in the launcher and Cage Launcher, with a limiter against
   clipping.
 - **Steam Deck (Linux):** a Deck profile, on by default there: 1280x720 with FSR 1.0 to the
   800p screen, 2 frames queued (fewer stutters with the CPU and GPU at full clocks), 60 FPS cap.
@@ -38,7 +38,7 @@
 
 [Português](#português)
 
-GNSB's UFC 3 port 0.1.6 with the fixes made for the UFC 4 port, built for the PORTHEON launcher.
+GNSB's UFC 3 port 0.1.6 with the fixes made for the UFC 4 port, built for Cage Launcher.
 Saves, settings and the shader cache stay in `%LOCALAPPDATA%\UFC3Native`.
 
 - **Two or more controllers, two or more players.** Each gamepad is its own PS4 user (two
@@ -56,7 +56,7 @@ Saves, settings and the shader cache stay in `%LOCALAPPDATA%\UFC3Native`.
 ## Português
 
 O port do UFC 3 do GNSB, versão 0.1.6, com as correções feitas para o port do UFC 4, preparado
-para o launcher PORTHEON. Saves, configurações e cache de shaders continuam em
+para o Cage Launcher. Saves, configurações e cache de shaders continuam em
 `%LOCALAPPDATA%\UFC3Native`.
 
 - **Dois ou mais controles, dois ou mais jogadores.** Cada controle é um usuário do PS4 (dois

@@ -1,6 +1,6 @@
 # UFC 1 native port 0.1.0 (test)
 
-First package of EA SPORTS UFC (2014, PS4 CUSA00222, update 1.08), also in PORTHEON 1.7.
+First package of EA SPORTS UFC (2014, PS4 CUSA00222, update 1.08), also in Cage Launcher.
 
 - Fights run at the right speed. UFC 1 counts fight time per frame at its own 30 FPS; the port
   forced 60 FPS with a fast virtual vblank, so a fight ran about twice as fast. The port now follows

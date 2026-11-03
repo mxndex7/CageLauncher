@@ -16,7 +16,7 @@ O que mudou nesta versão: `RELEASE-NOTES.md`.
 ## Como jogar
 
 1. Extraia esta pasta em qualquer lugar (fora da pasta do jogo e fora do OneDrive), ou use o
-   launcher PORTHEON.
+   Cage Launcher.
 2. Abra **`UFC2.exe`**, clique em **Browse...**, escolha a pasta do UFC 2 e aperte **Play**.
 3. Dados, saves e logs ficam em `%LOCALAPPDATA%\UFC2Native`.
 4. Dois jogadores: conecte dois controles; cada controle é um jogador.
@@ -38,7 +38,7 @@ mistura para 2 canais sem abaixar vozes e narração. Se ainda quiser mais alto 
 O port usa Vulkan e funciona com o ReShade (https://reshade.me):
 
 1. Rode o instalador do ReShade e escolha o executável **`bin\sacredfire-game.exe`** dentro da
-   pasta do port (`UFC2.exe` é só o launcher; no PORTHEON: `games\UFC2\bin\sacredfire-game.exe`).
+   pasta do port (`UFC2.exe` é só o launcher; no Cage Launcher: `games\UFC2\bin\sacredfire-game.exe`).
 2. Em "rendering API" escolha **Vulkan**, e depois os efeitos que quiser.
 3. Abra o jogo pelo launcher como sempre; **Home** abre o menu do ReShade.
 

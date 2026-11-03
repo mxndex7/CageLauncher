@@ -1,6 +1,6 @@
 # UFC 2 native port 0.1.0 (test)
 
-## 0.1.0-test7 (PORTHEON 1.6)
+## 0.1.0-test7
 
 - **Create Fighter crash fixed** (code 23 when confirming a new fighter): an image copy
   reached past the texture it wrote into and the graphics card stopped. Every image copy is
@@ -10,18 +10,18 @@
   ("Patches da comunidade") to turn one on.
 - Better crash reports: a GPU loss now names the texture involved.
 
-## 0.1.0-test6 (PORTHEON 1.5)
+## 0.1.0-test6
 
-- **Auto settings:** on the first start PORTHEON reads your PC (graphics card and its memory,
+- **Auto settings:** on the first start Cage Launcher reads your PC (graphics card and its memory,
   processor threads, RAM, monitor) and picks this game's settings. The new **Auto settings**
   button does it again any time. FSR stays off (native port: not needed); PS4 Pro mode only on
   strong NVIDIA / AMD cards.
 
-## 0.1.0-test5 (PORTHEON 1.4)
+## 0.1.0-test5
 
 - **Louder, clearer sound.** The game mixes 7.1; on headphones and stereo speakers the port now
   folds it to 2 channels itself, without the attenuation that made voices and commentary quiet.
-  New **Volume** setting (50% to 300%) in the launcher and PORTHEON, with a limiter against
+  New **Volume** setting (50% to 300%) in the launcher and Cage Launcher, with a limiter against
   clipping.
 - **Steam Deck (Linux):** a Deck profile, on by default there: 1280x720 with FSR 1.0 to the
   800p screen, 2 frames queued (fewer stutters with the CPU and GPU at full clocks), 60 FPS cap.
@@ -41,7 +41,7 @@ rate fixes.
 - UFC 2 is recognized by the launcher (`UFC2.exe`, data in `%LOCALAPPDATA%\UFC2Native`).
 - The system functions UFC 2 uses and the others did not: fibers (libSceFiber), the module list,
   two online queries.
-- Windows and Linux packages; also included in the PORTHEON launcher.
+- Windows and Linux packages; also included in Cage Launcher.
 
 This is a test build: send the newest log (`Open logs folder`) from every run.
 
@@ -56,6 +56,6 @@ saves e FPS dele.
 - O UFC 2 é reconhecido pelo launcher (`UFC2.exe`, dados em `%LOCALAPPDATA%\UFC2Native`).
 - As funções do sistema que o UFC 2 usa e os outros não: fibers (libSceFiber), a lista de
   módulos, duas consultas online.
-- Pacotes para Windows e Linux; também incluído no launcher PORTHEON.
+- Pacotes para Windows e Linux; também incluído no Cage Launcher.
 
 É uma versão de teste: mande o log mais novo (`Open logs folder`) de cada vez que jogar.
