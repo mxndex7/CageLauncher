@@ -41,7 +41,7 @@
 
 /* ---------------------------------------------------------------- GDI+ flat API (subset) */
 typedef struct { UINT32 GdiplusVersion; void *DebugEventCallback; BOOL SuppressBackgroundThread; BOOL SuppressExternalCodecs; } GdiplusStartupInput;
-typedef void GpImage; typedef void GpGraphics; typedef void GpBrush;
+typedef void GpImage; typedef void GpGraphics; typedef void GpBrush; typedef void GpPen; typedef void GpPath;
 int WINAPI GdiplusStartup(ULONG_PTR *, const GdiplusStartupInput *, void *);
 int WINAPI GdipLoadImageFromFile(const WCHAR *, GpImage **);
 int WINAPI GdipGetImageWidth(GpImage *, UINT *);
@@ -57,19 +57,30 @@ int WINAPI GdipFillRectangleI(GpGraphics *, GpBrush *, INT, INT, INT, INT);
 int WINAPI GdipDeleteBrush(GpBrush *);
 int WINAPI GdipDeleteGraphics(GpGraphics *);
 int WINAPI GdipDisposeImage(GpImage *);
+int WINAPI GdipSetPixelOffsetMode(GpGraphics *, int);
+int WINAPI GdipCreatePen1(UINT32, float, int, GpPen **);
+int WINAPI GdipDeletePen(GpPen *);
+int WINAPI GdipCreatePath(int, GpPath **);
+int WINAPI GdipDeletePath(GpPath *);
+int WINAPI GdipAddPathLineI(GpPath *, INT, INT, INT, INT);
+int WINAPI GdipClosePathFigure(GpPath *);
+int WINAPI GdipDrawPath(GpGraphics *, GpPen *, GpPath *);
 
-/* ---------------------------------------------------------------- colours */
-#define C_BG      RGB(20, 20, 24)
-#define C_PANEL   RGB(28, 28, 34)
-#define C_EDIT    RGB(36, 36, 44)
-#define C_TEXT    RGB(232, 232, 236)
-#define C_SUB     RGB(150, 150, 162)
-#define C_ACCENT  RGB(210, 10, 10)
-#define C_ACCENT2 RGB(150, 6, 6)
-#define C_BTN     RGB(48, 48, 58)
-#define C_BTN2    RGB(36, 36, 44)
-#define C_GOOD    RGB(90, 200, 120)
-#define C_BAD     RGB(240, 90, 80)
+/* ---------------------------------------------------------------- colours: preto, branco e vermelho UFC (a paleta do Cage Launcher) */
+#define C_BG      RGB(10, 10, 12)     /* fundo */
+#define C_EDIT    RGB(17, 17, 19)     /* superfície: campos e dropdowns */
+#define C_LINE    RGB(38, 38, 43)     /* borda de 1px e divisores */
+#define C_LINEHOT RGB(58, 58, 66)     /* borda em hover */
+#define C_ROWSEL  RGB(28, 28, 32)     /* botão pressionado */
+#define C_OFF     RGB(40, 40, 46)     /* trilho do switch desligado, JOGAR desabilitado */
+#define C_TEXT    RGB(242, 242, 242)
+#define C_SUB     RGB(138, 138, 147)  /* texto secundário */
+#define C_ACCENT  RGB(210, 10, 10)    /* vermelho UFC */
+#define C_ACCHOT  RGB(229, 37, 42)    /* acento em hover */
+#define C_ACCENT2 RGB(168, 8, 8)      /* acento pressionado */
+#define C_GOOD    RGB(76, 195, 138)   /* bom */
+#define C_WARN    RGB(240, 160, 32)   /* aviso (âmbar) */
+#define C_BAD     RGB(255, 107, 94)   /* erro: coral, diferente do acento */
 
 /* ---------------------------------------------------------------- control ids */
 enum {
@@ -95,7 +106,7 @@ static Settings S;
 static BOOL g_headless; static DWORD g_exitCode;   /* --headless: started by Cage Launcher, no window of its own, no overlay */
 static HINSTANCE g_inst;
 static HWND g_wnd, g_tip, g_status;
-static HFONT g_font, g_fontBold, g_fontTitle, g_fontPlay;
+static HFONT g_font, g_fontBold, g_fontTitle, g_fontPlay, g_fontLabel, g_fontBtn;
 static HBRUSH g_brBg, g_brEdit;
 static int g_dpi = 96;
 static wchar_t g_exeDir[MAX_PATH], g_ini[MAX_PATH], g_lastLog[MAX_PATH];
@@ -104,7 +115,7 @@ static ULONG_PTR g_gdip;
 static HANDLE g_proc;
 static BOOL g_applying;
 static GUID g_prevScheme; static BOOL g_schemeChanged;
-static COLORREF g_statusColor = RGB(150, 150, 162);
+static COLORREF g_statusColor = C_SUB;
 static wchar_t g_gameVer[32] = L"";
 static DWORD g_pid; static HWND g_gameWnd; static DWORD g_startTick;
 static float g_fps[36000]; static int g_nfps;   /* one sample per second, up to 10 h */
@@ -525,57 +536,58 @@ static int HeadlessAutoConfig(BOOL force)
 }
 
 /* ---------------------------------------------------------------- header image */
-static void BuildHeader(void)
+static void FillC(HDC dc, RECT r, COLORREF c) { HBRUSH b = CreateSolidBrush(c); FillRect(dc, &r, b); DeleteObject(b); }
+static void FrameC(HDC dc, RECT r, COLORREF c) { HBRUSH b = CreateSolidBrush(c); FrameRect(dc, &r, b); DeleteObject(b); }
+static const wchar_t *Caps(wchar_t *out, int n, const wchar_t *s) { wcsncpy(out, s, n - 1); out[n - 1] = 0; CharUpperW(out); return out; }
+/* contorno octogonal de 1px: o motivo "cage" (aqui só a moldura do ícone do jogo) */
+static void Octagon(GpGraphics *g, RECT r, int cut, COLORREF c)
 {
+    int l = r.left, t = r.top, rr = r.right - 1, b = r.bottom - 1;
+    GpPath *p = NULL; GdipCreatePath(0, &p);
+    GdipAddPathLineI(p, l + cut, t, rr - cut, t); GdipAddPathLineI(p, rr, t + cut, rr, b - cut);
+    GdipAddPathLineI(p, rr - cut, b, l + cut, b); GdipAddPathLineI(p, l, b - cut, l, t + cut);
+    GdipClosePathFigure(p);
+    UINT32 argb = 0xFF000000u | ((UINT32)GetRValue(c) << 16) | ((UINT32)GetGValue(c) << 8) | GetBValue(c);
+    GpPen *pen = NULL; GdipCreatePen1(argb, 1.0f, 2, &pen); GdipDrawPath(g, pen, p); GdipDeletePen(pen); GdipDeletePath(p);
+}
+static void BuildHeader(void)
+{   /* faixa sólida: ícone do jogo numa moldura octogonal, título, subtítulo e teclas; linha fina embaixo */
     RECT rc; GetClientRect(g_wnd, &rc);
     int w = rc.right, h = SC(112);
     HDC wdc = GetDC(g_wnd), dc = CreateCompatibleDC(wdc);
     if (g_header) DeleteObject(g_header);
     g_header = CreateCompatibleBitmap(wdc, w, h); g_headerW = w; g_headerH = h;
     HGDIOBJ old = SelectObject(dc, g_header);
-    HBRUSH b = CreateSolidBrush(RGB(12, 12, 14)); RECT r = {0, 0, w, h}; FillRect(dc, &r, b); DeleteObject(b);
+    RECT r = {0, 0, w, h}; FillC(dc, r, C_BG);
+    RECT ln = {0, h - 1, w, h}; FillC(dc, ln, C_LINE);
 
     GpGraphics *g = NULL; GdipCreateFromHDC(dc, &g);
     if (g) {
-        GdipSetInterpolationMode(g, 7 /* HighQualityBicubic */);
-        wchar_t p[MAX_PATH]; GpImage *img = NULL; UINT iw = 0, ih = 0;
-        if (S.game[0]) { Join(p, S.game, L"sce_sys\\pic1.png"); if (!FileExists(p)) Join(p, S.game, L"sce_sys\\pic0.png"); }
-        if (S.game[0] && FileExists(p) && GdipLoadImageFromFile(p, &img) == 0 && img) {
-            GdipGetImageWidth(img, &iw); GdipGetImageHeight(img, &ih);
-            if (iw && ih) {   /* "cover" crop, a band a bit above the middle */
-                int sh = (int)((double)iw * h / w); if (sh > (int)ih) sh = ih;
-                int sy = (int)(ih - sh) * 2 / 5;
-                GdipDrawImageRectRectI(g, img, 0, 0, w, h, 0, sy, iw, sh, 2 /* UnitPixel */, NULL, NULL, NULL);
-            }
-            GdipDisposeImage(img);
-        }
-        POINT a = {0, 0}, z = {w, 0}; GpBrush *lb = NULL;
-        GdipCreateLineBrushI(&a, &z, 0xF00C0C0E, 0x500C0C0E, 0, &lb);
-        if (lb) { GdipFillRectangleI(g, lb, 0, 0, w, h); GdipDeleteBrush(lb); }
-        GpBrush *red = NULL; GdipCreateSolidFill(0xFFD20A0A, &red);
-        if (red) { GdipFillRectangleI(g, red, 0, h - SC(3), w, SC(3)); GdipDeleteBrush(red); }
-        img = NULL;
+        GdipSetInterpolationMode(g, 7 /* HighQualityBicubic */); GdipSetSmoothingMode(g, 4); GdipSetPixelOffsetMode(g, 4);
+        RECT fr = {SC(10), SC(6), SC(110), SC(106)}; Octagon(g, fr, SC(16), C_LINE);
+        wchar_t p[MAX_PATH]; GpImage *img = NULL; BOOL icon = FALSE;
         if (S.game[0]) Join(p, S.game, L"sce_sys\\icon0.png");
         if (S.game[0] && FileExists(p) && GdipLoadImageFromFile(p, &img) == 0 && img) {
-            GdipDrawImageRectI(g, img, SC(16), SC(12), SC(84), SC(84)); GdipDisposeImage(img);
+            GdipDrawImageRectI(g, img, SC(18), SC(14), SC(84), SC(84)); GdipDisposeImage(img); icon = TRUE;
         }
         GdipDeleteGraphics(g);
+        if (!icon) { RECT ir = {SC(10), SC(6), SC(110), SC(106)}; SelectObject(dc, g_fontBtn); SetTextColor(dc, C_SUB); SetBkMode(dc, TRANSPARENT);
+                    DrawTextW(dc, L"UFC 5", -1, &ir, DT_CENTER | DT_VCENTER | DT_SINGLELINE); }   /* sem o ícone do jogo */
     }
     SetBkMode(dc, TRANSPARENT);
-    int tx = SC(116);
-    SelectObject(dc, g_fontTitle); SetTextColor(dc, RGB(255, 255, 255));
-    TextOutW(dc, tx, SC(16), L"EA SPORTS UFC 5", 15);
-    SelectObject(dc, g_font); SetTextColor(dc, RGB(205, 205, 212));
+    int tx = SC(128); wchar_t t[32];
+    SelectObject(dc, g_fontTitle); SetTextColor(dc, C_TEXT); SetTextCharacterExtra(dc, SC(1));
+    TextOutW(dc, tx, SC(14), Caps(t, 32, L"EA SPORTS UFC 5"), 15); SetTextCharacterExtra(dc, 0);
+    SelectObject(dc, g_font); SetTextColor(dc, C_SUB);
     wchar_t sub[256];
     _snwprintf(sub, 256, L"%s  ·  versão %s  ·  Port para PC  ·  CAGE LAUNCHER", TITLE_ID, g_gameVer[0] ? g_gameVer : L"?");
     TextOutW(dc, tx, SC(56), sub, (int)wcslen(sub));
-    SetTextColor(dc, RGB(160, 160, 170));
-    const wchar_t *keys = L"Teclado:  J/L/I/K = X/O/\u25B3/\u25A1  ·  WASD analógico  ·  setas d-pad  ·  Q/E L1/R1  ·  Z/C L2/R2  ·  Enter Options";
+    SetTextColor(dc, C_SUB);
+    const wchar_t *keys = L"Teclado:  J/L/I/K = X/O/△/□  ·  WASD analógico  ·  setas d-pad  ·  Q/E L1/R1  ·  Z/C L2/R2  ·  Enter Options";
     TextOutW(dc, tx, SC(78), keys, (int)wcslen(keys));
     SelectObject(dc, old); DeleteDC(dc); ReleaseDC(g_wnd, wdc);
     RECT hr = {0, 0, w, h}; InvalidateRect(g_wnd, &hr, FALSE);
 }
-
 static void RefreshGameInfo(void)
 {
     wchar_t t[32], v[32];
@@ -601,37 +613,89 @@ static void Tip(int id, const wchar_t *text)
     TOOLINFOW ti = {sizeof(ti)}; ti.uFlags = TTF_IDISHWND | TTF_SUBCLASS; ti.hwnd = g_wnd; ti.uId = (UINT_PTR)Ctl(id); ti.lpszText = (LPWSTR)text;
     SendMessageW(g_tip, TTM_ADDTOOLW, 0, (LPARAM)&ti);
 }
-static HWND Label(const wchar_t *t, int x, int y, int w) { return Mk(L"STATIC", t, SS_LEFT | SS_CENTERIMAGE, x, y, w, 24, -1); }
+static HWND Label(const wchar_t *t, int x, int y, int w)
+{
+    HWND l = Mk(L"STATIC", t, SS_LEFT | SS_CENTERIMAGE, x, y, w, 24, -1); SendMessageW(l, WM_SETFONT, (WPARAM)g_fontLabel, TRUE); return l;
+}
 static RECT g_grp[6]; static const wchar_t *g_grpName[6]; static int g_ngrp;
 static void Group(const wchar_t *t, int x, int y, int w, int h)
-{   /* painted in WM_PAINT: a thin frame with the title cut into its top edge */
+{   /* painted in WM_PAINT: a section title over the controls of the group */
     if (g_ngrp < 6) { SetRect(&g_grp[g_ngrp], SC(x), SC(y + 6), SC(x + w), SC(y + h)); g_grpName[g_ngrp++] = t; }
 }
 static void PaintGroups(HDC dc)
-{
-    HPEN pen = CreatePen(PS_SOLID, 1, RGB(58, 58, 70)); HGDIOBJ op = SelectObject(dc, pen), ob = SelectObject(dc, GetStockObject(NULL_BRUSH));
-    HGDIOBJ of = SelectObject(dc, g_fontBold); SetBkMode(dc, OPAQUE); SetBkColor(dc, C_BG); SetTextColor(dc, RGB(235, 70, 60));
+{   /* seção: traço vermelho curto, título em caixa alta e linha fina até a borda direita */
+    HGDIOBJ of = SelectObject(dc, g_fontBold); SetBkMode(dc, TRANSPARENT); SetTextColor(dc, C_TEXT); SetTextCharacterExtra(dc, SC(2));
     for (int i = 0; i < g_ngrp; i++) {
-        RECT r = g_grp[i]; RoundRect(dc, r.left, r.top, r.right, r.bottom, SC(10), SC(10));
-        wchar_t t[64]; _snwprintf(t, 64, L" %s ", g_grpName[i]);
+        RECT r = g_grp[i]; wchar_t t[64]; Caps(t, 64, g_grpName[i]);
         SIZE sz; GetTextExtentPoint32W(dc, t, (int)wcslen(t), &sz);
-        TextOutW(dc, r.left + SC(12), r.top - sz.cy / 2, t, (int)wcslen(t));
+        RECT dash = {r.left, r.top - SC(1), r.left + SC(14), r.top + SC(1)}; FillC(dc, dash, C_ACCENT);
+        TextOutW(dc, r.left + SC(24), r.top - sz.cy / 2, t, (int)wcslen(t));
+        RECT ln = {r.left + SC(24) + sz.cx + SC(10), r.top, r.right, r.top + 1}; FillC(dc, ln, C_LINE);
     }
-    SelectObject(dc, of); SelectObject(dc, ob); SelectObject(dc, op); DeleteObject(pen);
+    SetTextCharacterExtra(dc, 0); SelectObject(dc, of);
 }
+
+/* ---------------------------------------------------------------- controls drawn in the launcher style
+   Só o desenho muda: os controles continuam COMBOBOX, EDIT e BUTTON comuns (mesmas mensagens e notificações).
+   Cada subclass guarda o procedimento original em GWLP_USERDATA e repassa tudo para ele. */
+static HWND g_hotCtl;   /* dropdown ou botão sob o mouse */
+static LRESULT Base(HWND h, UINT m, WPARAM wp, LPARAM lp) { return CallWindowProcW((WNDPROC)GetWindowLongPtrW(h, GWLP_USERDATA), h, m, wp, lp); }
+static void TrackHot(HWND h, UINT m)
+{
+    if (m == WM_MOUSEMOVE && g_hotCtl != h) {
+        HWND old = g_hotCtl; g_hotCtl = h; if (old) InvalidateRect(old, NULL, FALSE); InvalidateRect(h, NULL, FALSE);
+        TRACKMOUSEEVENT t = {sizeof(t), TME_LEAVE, h, 0}; TrackMouseEvent(&t);
+    } else if (m == WM_MOUSELEAVE && g_hotCtl == h) { g_hotCtl = NULL; InvalidateRect(h, NULL, FALSE); }
+    else if (m == WM_SETFOCUS || m == WM_KILLFOCUS) InvalidateRect(h, NULL, FALSE);
+}
+static void Subclass(HWND c, WNDPROC p) { SetWindowLongPtrW(c, GWLP_USERDATA, SetWindowLongPtrW(c, GWLP_WNDPROC, (LONG_PTR)p)); }
+/* dropdown: superfície, borda de 1px, chevron fino; hover cinza, foco ou aberto em vermelho */
+static LRESULT CALLBACK ComboProc(HWND h, UINT m, WPARAM wp, LPARAM lp)
+{
+    TrackHot(h, m);
+    if (m == WM_ERASEBKGND) return 1;
+    if (m != WM_PAINT) return Base(h, m, wp, lp);
+    PAINTSTRUCT ps; HDC dc = BeginPaint(h, &ps); RECT r; GetClientRect(h, &r);
+    BOOL open = SendMessageW(h, CB_GETDROPPEDSTATE, 0, 0) != 0, dis = !IsWindowEnabled(h);
+    FillC(dc, r, C_EDIT); FrameC(dc, r, open || GetFocus() == h ? C_ACCENT : g_hotCtl == h ? C_LINEHOT : C_LINE);
+    wchar_t t[320] = L""; int i = (int)SendMessageW(h, CB_GETCURSEL, 0, 0);
+    if (i >= 0 && SendMessageW(h, CB_GETLBTEXTLEN, i, 0) < 320) SendMessageW(h, CB_GETLBTEXT, i, (LPARAM)t);
+    HGDIOBJ of = SelectObject(dc, (HFONT)SendMessageW(h, WM_GETFONT, 0, 0)); SetBkMode(dc, TRANSPARENT); SetTextColor(dc, dis ? C_SUB : C_TEXT);
+    RECT tr = {r.left + SC(8), r.top, r.right - SC(26), r.bottom}; DrawTextW(dc, t, -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+    HPEN pen = CreatePen(PS_SOLID, 1, g_hotCtl == h ? C_TEXT : C_SUB); HGDIOBJ op = SelectObject(dc, pen);
+    int cx = r.right - SC(13), cy = (r.top + r.bottom) / 2, k = SC(4);
+    MoveToEx(dc, cx - k, cy - k / 2, NULL); LineTo(dc, cx, cy + k / 2); LineTo(dc, cx + k + 1, cy - k / 2 - 1);
+    SelectObject(dc, op); DeleteObject(pen); SelectObject(dc, of);
+    EndPaint(h, &ps); return 0;
+}
+/* campo de texto: borda de 1px na cor da borda, vermelha com o foco */
+static LRESULT CALLBACK EditProc(HWND h, UINT m, WPARAM wp, LPARAM lp)
+{
+    if (m == WM_NCPAINT) {
+        HDC dc = GetWindowDC(h); RECT r; GetWindowRect(h, &r); OffsetRect(&r, -r.left, -r.top);
+        FrameC(dc, r, GetFocus() == h ? C_ACCENT : C_LINE); ReleaseDC(h, dc); return 0;
+    }
+    LRESULT res = Base(h, m, wp, lp);
+    if (m == WM_SETFOCUS || m == WM_KILLFOCUS) RedrawWindow(h, NULL, NULL, RDW_FRAME | RDW_INVALIDATE);
+    return res;
+}
+/* botão (owner-draw): só acompanha o hover; o desenho fica em DrawButton */
+static LRESULT CALLBACK BtnProc(HWND h, UINT m, WPARAM wp, LPARAM lp) { TrackHot(h, m); return Base(h, m, wp, lp); }
+
 static HWND Combo(int id, int x, int y, int w)
 {
-    HWND c = Mk(L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, x, y, w, 300, id); SetWindowTheme(c, L"DarkMode_CFD", NULL); return c;
+    HWND c = Mk(L"COMBOBOX", L"", CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP, x, y, w, 300, id); SetWindowTheme(c, L"DarkMode_CFD", NULL); Subclass(c, ComboProc); return c;
 }
 static HWND Edit(int id, int x, int y, int w)
 {
     HWND e = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | WS_BORDER, SC(x), SC(y), SC(w), SC(24), g_wnd, (HMENU)(INT_PTR)id, g_inst, NULL);
-    SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE); SetWindowTheme(e, L"DarkMode_CFD", NULL); return e;
+    SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE); SetWindowTheme(e, L"DarkMode_CFD", NULL);
+    SendMessageW(e, EM_SETMARGINS, EC_LEFTMARGIN | EC_RIGHTMARGIN, MAKELONG(SC(6), SC(6))); Subclass(e, EditProc); return e;
 }
-static HWND Btn(int id, const wchar_t *t, int x, int y, int w, int h) { return Mk(L"BUTTON", t, BS_OWNERDRAW | WS_TABSTOP, x, y, w, h, id); }
+static HWND Btn(int id, const wchar_t *t, int x, int y, int w, int h) { HWND b = Mk(L"BUTTON", t, BS_OWNERDRAW | WS_TABSTOP, x, y, w, h, id); Subclass(b, BtnProc); return b; }
 static HWND Check(int id, const wchar_t *t, int x, int y, int w)
-{
-    HWND c = Mk(L"BUTTON", t, BS_AUTOCHECKBOX | WS_TABSTOP, x, y, w, 22, id); SetWindowTheme(c, L"", L""); return c;
+{   /* desenhada como switch em DrawSwitch (NM_CUSTOMDRAW); continua um BS_AUTOCHECKBOX */
+    return Mk(L"BUTTON", t, BS_AUTOCHECKBOX | WS_TABSTOP, x, y, w, 22, id);   /* com tema: só assim o controle manda NM_CUSTOMDRAW */
 }
 static void Add(int id, const wchar_t *s) { SendMessageW(Ctl(id), CB_ADDSTRING, 0, (LPARAM)s); }
 
@@ -682,23 +746,23 @@ static void BuildUi(void)
 
     y = 364;
     Group(L"Opções", 16, y, 828, 210);
-    Check(ID_FULL, L"Tela cheia (sem bordas)", 32, y + 22, 260);
-    Check(ID_PRIO, L"Prioridade alta para o jogo", 32, y + 44, 260);
-    Check(ID_DGPU, L"Forçar GPU dedicada (Windows)", 32, y + 66, 260);
-    Check(ID_POWER, L"Plano de energia de alto desempenho", 32, y + 88, 260);
-    Check(ID_AMD, L"Patches de CPU AMD (experimental)", 308, y + 22, 260);
-    Check(ID_CURSOR, L"Esconder o cursor do mouse", 308, y + 44, 260);
-    Check(ID_TROPHY, L"Notificações de troféus", 308, y + 66, 260);
-    Check(ID_CONSOLE, L"Mostrar console do motor", 308, y + 88, 260);
+    Check(ID_FULL, L"Tela cheia (sem bordas)", 32, y + 22, 270);
+    Check(ID_PRIO, L"Prioridade alta para o jogo", 32, y + 44, 270);
+    Check(ID_DGPU, L"Forçar GPU dedicada (Windows)", 32, y + 66, 270);
+    Check(ID_POWER, L"Plano de energia de alto desempenho", 32, y + 88, 270);
+    Check(ID_AMD, L"Patches de CPU AMD (experimental)", 308, y + 22, 270);
+    Check(ID_CURSOR, L"Esconder o cursor do mouse", 308, y + 44, 270);
+    Check(ID_TROPHY, L"Notificações de troféus", 308, y + 66, 270);
+    Check(ID_CONSOLE, L"Mostrar console do motor", 308, y + 88, 270);
     Label(L"FPS na tela", 32, y + 112, 90); Combo(ID_OVERLAY, 126, y + 112, 166);
-    Check(ID_ECO, L"Sem economia de energia (EcoQoS)", 308, y + 112, 260);
-    Check(ID_FASTSH, L"Compilação de shaders rápida", 584, y + 112, 250);
-    Check(ID_LPAGES, L"Large pages (precisa de admin uma vez)", 32, y + 136, 270);
-    Check(ID_STAGEPREP, L"Preparação paralela (experimental)", 308, y + 136, 260);
-    Check(ID_CALIB, L"Calibrar FPS sozinho (12 lutas)", 584, y + 136, 250);
-    Check(ID_CFPU, L"Matemática do console (+FPS na luta)", 32, y + 158, 270);
-    Check(ID_DIAG, L"Diagnóstico de desempenho no log", 308, y + 158, 260);
-    Check(ID_DIAGFULL, L"Diagnóstico completo (1 partida)", 584, y + 158, 250);
+    Check(ID_ECO, L"Sem economia de energia (EcoQoS)", 308, y + 112, 270);
+    Check(ID_FASTSH, L"Compilação de shaders rápida", 584, y + 112, 260);
+    Check(ID_LPAGES, L"Large pages (precisa de admin uma vez)", 32, y + 136, 274);
+    Check(ID_STAGEPREP, L"Preparação paralela (experimental)", 308, y + 136, 270);
+    Check(ID_CALIB, L"Calibrar FPS sozinho (12 lutas)", 584, y + 136, 260);
+    Check(ID_CFPU, L"Matemática do console (+FPS na luta)", 32, y + 158, 274);
+    Check(ID_DIAG, L"Diagnóstico de desempenho no log", 308, y + 158, 270);
+    Check(ID_DIAGFULL, L"Diagnóstico completo (1 partida)", 584, y + 158, 260);
     Label(L"Geração de quadros", 32, y + 182, 130); Combo(ID_FRAMEGEN, 166, y + 182, 400);
     for (int i = 0; i < 3; i++) Add(ID_FRAMEGEN, FRAMEGEN_NAME[i]);
     Tip(ID_FRAMEGEN, L"Mostra 120/144 FPS na tela com o Lossless Scaling (Steam), que cria quadros intermediários entre os do jogo. O jogo em si continua no FPS do motor (perto de 30 na luta): a imagem fica mais fluida, com um pouco mais de atraso no controle.\n\n\"Abrir e ligar sozinho\": o port abre o Lossless Scaling antes do jogo e aperta o atalho dele (Ctrl+Alt+S; outro atalho em ls_hotkey= no UFC5.ini) uns segundos depois que o jogo aparece.\n\"Só abrir\": para quem fez no Lossless Scaling um perfil do UFC5-Game.exe com Auto Scale.\n\nNo Lossless Scaling: Frame Generation LSFG (a mais nova), modo Adaptive com alvo 144 (ou 120), ou Fixed X4.");
@@ -712,10 +776,10 @@ static void BuildUi(void)
     Add(ID_OVERLAY, L"Desligado"); Add(ID_OVERLAY, L"Canto superior esquerdo"); Add(ID_OVERLAY, L"Canto superior direito");
     Tip(ID_OVERLAY, L"Mostra o FPS por cima do jogo, lá em cima, com a média e o 1% pior da sessão. Durante o jogo, F10 liga e desliga.");
     Tip(ID_ECO, L"Diz ao Windows para nunca colocar o jogo em modo de economia (EcoQoS / Power Throttling). Sem isso o Windows pode mandar as threads do jogo para os núcleos de eficiência (Intel 12ª geração ou mais nova) ou reduzir o clock em notebook.");
-    Check(ID_BINDLESS, L"Texturas bindless (experimental)", 584, y + 22, 250);
-    Check(ID_TESS, L"Tesselação (experimental)", 584, y + 44, 250);
-    Check(ID_PLAYGO, L"PlayGo hack (se travar no load)", 584, y + 66, 250);
-    Check(ID_READBACK, L"Readback de imagens (recomendado)", 584, y + 88, 250);
+    Check(ID_BINDLESS, L"Texturas bindless (experimental)", 584, y + 22, 260);
+    Check(ID_TESS, L"Tesselação (experimental)", 584, y + 44, 260);
+    Check(ID_PLAYGO, L"PlayGo hack (se travar no load)", 584, y + 66, 260);
+    Check(ID_READBACK, L"Readback de imagens (recomendado)", 584, y + 88, 260);
     Tip(ID_PRIO, L"Roda o motor do jogo com prioridade Alta no Windows, para outros programas não roubarem tempo de CPU.");
     Tip(ID_DGPU, L"Grava a preferência \"Alto desempenho\" do Windows (Configurações > Sistema > Tela > Gráficos) para o kyty_emulator.exe.");
     Tip(ID_POWER, L"Liga o plano de energia Alto desempenho enquanto o jogo está aberto e volta ao seu plano quando ele fecha.");
@@ -1415,17 +1479,17 @@ static LRESULT CALLBACK OverlayProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
     if (m == WM_PAINT) {
         PAINTSTRUCT ps; HDC dc = BeginPaint(w, &ps); RECT rc; GetClientRect(w, &rc);
         HBRUSH key = CreateSolidBrush(OV_KEY); FillRect(dc, &rc, key); DeleteObject(key);
-        HBRUSH bg = CreateSolidBrush(RGB(12, 12, 16)); HPEN pen = CreatePen(PS_SOLID, 1, RGB(12, 12, 16));
+        HBRUSH bg = CreateSolidBrush(C_BG); HPEN pen = CreatePen(PS_SOLID, 1, C_BG);
         HGDIOBJ ob = SelectObject(dc, bg), op = SelectObject(dc, pen);
         RoundRect(dc, 0, 0, rc.right, rc.bottom, SC(12), SC(12)); SelectObject(dc, ob); SelectObject(dc, op); DeleteObject(bg); DeleteObject(pen);
-        HBRUSH red = CreateSolidBrush(RGB(210, 10, 10)); RECT bar = {SC(6), SC(8), SC(9), rc.bottom - SC(8)}; FillRect(dc, &bar, red); DeleteObject(red);
+        HBRUSH red = CreateSolidBrush(C_ACCENT); RECT bar = {SC(6), SC(8), SC(9), rc.bottom - SC(8)}; FillRect(dc, &bar, red); DeleteObject(red);
         SetBkMode(dc, TRANSPARENT);
         wchar_t big[32], small[96]; float avg = 0, low = 0, best = 0;
-        COLORREF col = g_ovFps >= 50 ? RGB(90, 220, 120) : g_ovFps >= 30 ? RGB(240, 200, 60) : RGB(245, 90, 80);
+        COLORREF col = g_ovFps >= 50 ? C_GOOD : g_ovFps >= 30 ? C_WARN : C_BAD;
         if (g_ovFps > 0) _snwprintf(big, 32, L"%.0f FPS", g_ovFps); else wcscpy(big, L"-- FPS");
         if (FpsStats(&avg, &low, &best)) _snwprintf(small, 96, L"média %.0f  ·  1%% pior %.0f", avg, low); else wcscpy(small, L"UFC 5  ·  medindo...");
         SelectObject(dc, g_ovBig); SetTextColor(dc, col); RECT t1 = {SC(16), SC(4), rc.right - SC(8), SC(34)}; DrawTextW(dc, big, -1, &t1, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
-        SelectObject(dc, g_ovSmall); SetTextColor(dc, RGB(200, 200, 210)); RECT t2 = {SC(16), SC(32), rc.right - SC(8), rc.bottom - SC(4)}; DrawTextW(dc, small, -1, &t2, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+        SelectObject(dc, g_ovSmall); SetTextColor(dc, C_TEXT); RECT t2 = {SC(16), SC(32), rc.right - SC(8), rc.bottom - SC(4)}; DrawTextW(dc, small, -1, &t2, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
         EndPaint(w, &ps); return 0;
     }
     return DefWindowProcW(w, m, wp, lp);
@@ -1559,21 +1623,53 @@ static void ClearCache(void)
 
 /* ---------------------------------------------------------------- drawing */
 static void DrawButton(DRAWITEMSTRUCT *d)
-{
+{   /* JOGAR: vermelho sólido (hover mais claro, pressionado mais escuro, desabilitado cinza escuro);
+       os outros: contorno de 1px e texto branco, borda branca em hover ou com o foco */
     BOOL play = d->CtlID == ID_PLAY, down = d->itemState & ODS_SELECTED, dis = d->itemState & ODS_DISABLED, focus = d->itemState & ODS_FOCUS;
-    COLORREF bg = play ? (dis ? RGB(70, 30, 30) : down ? C_ACCENT2 : C_ACCENT) : (down ? C_BTN2 : C_BTN);
-    HBRUSH clear = CreateSolidBrush(C_BG); FillRect(d->hDC, &d->rcItem, clear); DeleteObject(clear);
-    HBRUSH br = CreateSolidBrush(bg); HPEN pen = CreatePen(PS_SOLID, 1, focus && !play ? RGB(120, 120, 135) : bg);
-    HGDIOBJ ob = SelectObject(d->hDC, br), op = SelectObject(d->hDC, pen);
-    RoundRect(d->hDC, d->rcItem.left, d->rcItem.top, d->rcItem.right, d->rcItem.bottom, SC(8), SC(8));
-    SelectObject(d->hDC, ob); SelectObject(d->hDC, op); DeleteObject(br); DeleteObject(pen);
-    wchar_t t[64]; GetWindowTextW(d->hwndItem, t, 64);
-    SetBkMode(d->hDC, TRANSPARENT); SetTextColor(d->hDC, dis ? RGB(170, 140, 140) : RGB(255, 255, 255));
-    HGDIOBJ of = SelectObject(d->hDC, play ? g_fontPlay : g_font);
-    DrawTextW(d->hDC, t, -1, &d->rcItem, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    BOOL hot = g_hotCtl == d->hwndItem; RECT r = d->rcItem;
+    FillC(d->hDC, r, C_BG);
+    if (play) FillC(d->hDC, r, dis ? C_OFF : down ? C_ACCENT2 : hot ? C_ACCHOT : C_ACCENT);
+    else { if (down) FillC(d->hDC, r, C_ROWSEL); FrameC(d->hDC, r, hot || focus ? C_TEXT : C_LINEHOT); }
+    wchar_t t[64]; GetWindowTextW(d->hwndItem, t, 64); if (play) CharUpperW(t);
+    SetBkMode(d->hDC, TRANSPARENT); SetTextColor(d->hDC, dis ? C_SUB : RGB(255, 255, 255));
+    HGDIOBJ of = SelectObject(d->hDC, play ? g_fontPlay : g_fontBtn); SetTextCharacterExtra(d->hDC, play ? SC(3) : 0);
+    DrawTextW(d->hDC, t, -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    SetTextCharacterExtra(d->hDC, 0); SelectObject(d->hDC, of);
+}
+/* item da lista aberta do dropdown: selecionado em cinza com barra vermelha, sem o azul do sistema */
+static void DrawComboItem(DRAWITEMSTRUCT *d)
+{
+    if ((d->itemState & ODS_COMBOBOXEDIT) || d->itemID == (UINT)-1) { InvalidateRect(d->hwndItem, NULL, FALSE); return; }   /* a face é de ComboProc */
+    BOOL sel = (d->itemState & ODS_SELECTED) != 0; RECT r = d->rcItem;
+    FillC(d->hDC, r, sel ? C_ROWSEL : C_EDIT);
+    if (sel) { RECT b = {r.left, r.top, r.left + SC(2), r.bottom}; FillC(d->hDC, b, C_ACCENT); }
+    wchar_t t[320] = L""; if (SendMessageW(d->hwndItem, CB_GETLBTEXTLEN, d->itemID, 0) < 320) SendMessageW(d->hwndItem, CB_GETLBTEXT, d->itemID, (LPARAM)t);
+    HGDIOBJ of = SelectObject(d->hDC, (HFONT)SendMessageW(d->hwndItem, WM_GETFONT, 0, 0)); SetBkMode(d->hDC, TRANSPARENT); SetTextColor(d->hDC, C_TEXT);
+    RECT tr = {r.left + SC(8), r.top, r.right - SC(4), r.bottom}; DrawTextW(d->hDC, t, -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
     SelectObject(d->hDC, of);
 }
-
+/* checkbox desenhada como switch: ligado = trilho vermelho e bolinha branca, desligado = trilho cinza escuro e bolinha cinza */
+static LRESULT DrawSwitch(NMCUSTOMDRAW *cd)
+{
+    if (cd->dwDrawStage != CDDS_PREPAINT) return CDRF_DODEFAULT;
+    HWND h = cd->hdr.hwndFrom; HDC dc = cd->hdc; RECT r = cd->rc;
+    BOOL on = SendMessageW(h, BM_GETCHECK, 0, 0) == BST_CHECKED, dis = !IsWindowEnabled(h), hot = (cd->uItemState & CDIS_HOT) != 0;
+    FillC(dc, r, C_BG);
+    int tw = SC(26), th = SC(14), ty = (r.top + r.bottom - th) / 2;
+    RECT tr = {r.left, ty, r.left + tw, ty + th};
+    if (on && !dis) FillC(dc, tr, hot ? C_ACCHOT : C_ACCENT);
+    else { FillC(dc, tr, C_OFF); FrameC(dc, tr, hot && !dis ? C_LINEHOT : C_LINE); }
+    int k = SC(8), kx = on ? tr.right - SC(3) - k : tr.left + SC(3), ky = (tr.top + tr.bottom - k) / 2;
+    RECT kr = {kx, ky, kx + k, ky + k}; FillC(dc, kr, dis ? C_LINEHOT : on ? RGB(255, 255, 255) : RGB(100, 100, 108));
+    wchar_t t[128]; GetWindowTextW(h, t, 128);
+    HGDIOBJ of = SelectObject(dc, (HFONT)SendMessageW(h, WM_GETFONT, 0, 0)); SetBkMode(dc, TRANSPARENT); SetTextColor(dc, dis ? C_SUB : C_TEXT);
+    RECT xr = {tr.right + SC(8), r.top, r.right, r.bottom}; DrawTextW(dc, t, -1, &xr, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+    if ((cd->uItemState & CDIS_FOCUS) && !(SendMessageW(h, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS)) {   /* foco pelo teclado */
+        RECT fr = {tr.left - SC(2), tr.top - SC(2), tr.right + SC(2), tr.bottom + SC(2)}; FrameC(dc, fr, C_TEXT);
+    }
+    SelectObject(dc, of);
+    return CDRF_SKIPDEFAULT;
+}
 /* ---------------------------------------------------------------- window procedure */
 static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
 {
@@ -1588,13 +1684,24 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
     }
     case WM_CTLCOLORSTATIC: case WM_CTLCOLORBTN: {
         HDC dc = (HDC)wp; SetBkColor(dc, C_BG);
-        SetTextColor(dc, (HWND)lp == g_status ? g_statusColor : C_TEXT);
+        SetTextColor(dc, (HWND)lp == g_status ? g_statusColor : C_SUB);   /* rótulos em cinza; as checkboxes se desenham em DrawSwitch */
         return (LRESULT)g_brBg;
     }
     case WM_CTLCOLOREDIT: case WM_CTLCOLORLISTBOX: {
         HDC dc = (HDC)wp; SetBkColor(dc, C_EDIT); SetTextColor(dc, C_TEXT); return (LRESULT)g_brEdit;
     }
-    case WM_DRAWITEM: DrawButton((DRAWITEMSTRUCT *)lp); return TRUE;
+    case WM_DRAWITEM: if (((DRAWITEMSTRUCT *)lp)->CtlType == ODT_COMBOBOX) DrawComboItem((DRAWITEMSTRUCT *)lp); else DrawButton((DRAWITEMSTRUCT *)lp); return TRUE;
+    case WM_MEASUREITEM: {   /* altura da face e dos itens dos dropdowns (owner-draw) */
+        MEASUREITEMSTRUCT *mi = (MEASUREITEMSTRUCT *)lp;
+        if (mi->CtlType == ODT_COMBOBOX) { mi->itemHeight = mi->itemID == (UINT)-1 ? SC(17) : SC(20); return TRUE; }
+        break;
+    }
+    case WM_NOTIFY: {   /* checkboxes desenhadas como switch */
+        NMHDR *nh = (NMHDR *)lp; wchar_t cls[16];
+        if (nh->code == NM_CUSTOMDRAW && nh->hwndFrom != g_tip && GetClassNameW(nh->hwndFrom, cls, 16) && !_wcsicmp(cls, L"Button")
+            && (GetWindowLongPtrW(nh->hwndFrom, GWL_STYLE) & BS_TYPEMASK) == BS_AUTOCHECKBOX) return DrawSwitch((NMCUSTOMDRAW *)lp);
+        break;
+    }
     case WM_COMMAND: {
         int id = LOWORD(wp), code = HIWORD(wp);
         if (g_applying) return 0;
@@ -1690,9 +1797,11 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
 
     HDC sdc = GetDC(NULL); g_dpi = GetDeviceCaps(sdc, LOGPIXELSY); ReleaseDC(NULL, sdc);
     g_font = CreateFontW(-SC(13), 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fontBold = CreateFontW(-SC(13), 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fontTitle = CreateFontW(-SC(32), 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-    g_fontPlay = CreateFontW(-SC(18), 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
+    g_fontBold = CreateFontW(-SC(13), 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Bahnschrift");
+    g_fontTitle = CreateFontW(-SC(30), 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Bahnschrift");
+    g_fontPlay = CreateFontW(-SC(20), 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Bahnschrift");
+    g_fontLabel = CreateFontW(-SC(13), 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Bahnschrift");
+    g_fontBtn = CreateFontW(-SC(13), 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Bahnschrift SemiCondensed");
     g_brBg = CreateSolidBrush(C_BG); g_brEdit = CreateSolidBrush(C_EDIT);
 
     LoadSettings();
@@ -1724,6 +1833,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     RECT wa; SystemParametersInfoW(SPI_GETWORKAREA, 0, &wa, 0);
     HWND w = CreateWindowExW(0, wc.lpszClassName, APP_TITLE, style, wa.left + ((wa.right - wa.left) - ww) / 2, wa.top + max(0, ((wa.bottom - wa.top) - wh) / 2), ww, wh, NULL, NULL, inst, NULL);
     BOOL dark = TRUE; DwmSetWindowAttribute(w, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof(dark));
+    COLORREF cap = C_BG; DwmSetWindowAttribute(w, 35 /* DWMWA_CAPTION_COLOR */, &cap, sizeof(cap));
     BuildUi();
     SettingsToUi();
     RefreshGameInfo();

@@ -108,7 +108,7 @@ O que o port faz sozinho
 - Placa com menos de 7 GB: limite de memória de vídeo em 85% da placa.
 - Sem economia de energia: o Windows nunca põe o jogo em modo econômico (EcoQoS).
 
-FPS na tela: aparece lá em cima, com cor: verde de 50 para cima, amarelo de 30 para cima e vermelho
+FPS na tela: aparece lá em cima, com cor: verde de 50 para cima, âmbar de 30 para cima e vermelho
 abaixo de 30. Mostra também a média e o 1% pior da sessão. F10 liga e desliga durante o jogo.
 
 Quando o jogo fecha, o port mostra "na luta X FPS", a média, o 1% pior e o máximo da sessão. O
