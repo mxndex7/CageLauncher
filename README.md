@@ -11,14 +11,24 @@
 
 ---
 
-## Downloads
+## O que há neste repositório
 
-| Arquivo | Para quem |
-|---|---|
-| `CageLauncher-1.0-Windows-x64.zip` | Windows 10 (1903+) e 11, 64 bits. Inclui o modo Intel Arc. |
-| `CageLauncher-1.0-Linux-x64.tar.gz` | Linux e Steam Deck, pelo Wine ou pelo Proton. É o mesmo pacote com o `cage.sh`. |
+Este repositório tem o **código-fonte do Cage Launcher** (`src/`), o do launcher do UFC 5
+(`games/UFC5/src/`) e a documentação. Ele **não traz os ports nem os jogos**: os motores dos UFC 1–4
+(`UFCn.exe`, `bin/`, `python/`, `share/`) e o do UFC 5 (`games/UFC5/bin`) vêm no pacote de cada port, e
+você precisa do seu próprio dump de cada jogo. Só clonar o repositório não dá um launcher pronto para jogar.
 
-**Placas Intel Arc:** não precisa de download separado. O Cage Launcher reconhece a placa Arc e liga o
+A pasta de uso tem o `CageLauncher.exe` na raiz e uma pasta por jogo:
+
+```
+CageLauncher.exe
+games\UFC1  games\UFC2  games\UFC3  games\UFC4  games\UFC5
+```
+
+Se houver um pacote pronto na aba **Releases**, ele já vem nesse formato. Para compilar você mesmo,
+veja [Como compilar](#como-compilar).
+
+**Placas Intel Arc:** não precisa de pacote separado. O Cage Launcher reconhece a placa Arc e liga o
 modo Intel Arc sozinho (veja [Intel Arc](#intel-arc)).
 
 ## Jogos
@@ -85,11 +95,13 @@ RTX 4060, a luta fica perto de 30 FPS. Detalhes em `games/UFC5/LEIA-ME.txt`.
 
 ## Como usar — Windows
 
-1. Extraia o `.zip` numa pasta fora do OneDrive, por exemplo `C:\Jogos\CageLauncher`.
+1. Coloque a pasta do pacote (com o `CageLauncher.exe` na raiz) num lugar fora do OneDrive, por
+   exemplo `C:\Jogos\CageLauncher`.
 2. Abra o `CageLauncher.exe`.
 3. Escolha o jogo na esquerda e, em **Procurar**, a pasta do dump. Aperte **JOGAR**.
 
 Requisitos:
+- Windows 10 (1903 ou mais novo) ou 11, 64 bits;
 - processador com AVX;
 - placa com Vulkan 1.3 (NVIDIA, AMD ou Intel Arc), com o driver atualizado;
 - para o UFC 5, o Microsoft Visual C++ Redistributable x64 (o port oferece o link) e 16 GB de RAM com
@@ -100,26 +112,15 @@ Saves, configurações e logs:
 - UFC 5: `games\UFC5\bin`;
 - Cage Launcher: `%LOCALAPPDATA%\CageLauncher\cage.ini`.
 
-## Como usar — Linux e Steam Deck
+## Linux e Steam Deck
 
-```bash
-tar xf CageLauncher-1.0-Linux-x64.tar.gz
-cd CageLauncher-1.0
-bash cage.sh             # abre o Cage Launcher
-bash cage.sh --install   # coloca o Cage Launcher no menu de aplicativos
-```
+Ainda **não há** script nem pacote para Linux. O `CageLauncher.exe` é um programa de Windows
+(Win32 + GDI+). Abri-lo pelo Wine ou pelo Proton pode funcionar, mas isso **não foi testado** nesta
+versão, nem com os jogos.
 
-- O `cage.sh` usa o **umu-launcher (Proton)** se ele estiver instalado. Se não, usa o **Wine 9
-  ou mais novo**. O prefixo fica em `~/.local/share/CageLauncher/prefix`.
-- As pastas do Linux aparecem no Cage Launcher como o disco **Z:**, por exemplo
-  `Z:\home\voce\Jogos\UFC 4`.
-- **Steam Deck:** em Modo Desktop, adicione o `CageLauncher.exe` como jogo de fora da Steam. Em
-  Propriedades > Compatibilidade, escolha GE-Proton ou Proton Experimental. Depois jogue no Modo
-  de Jogo.
+- No Wine, as pastas do Linux aparecem como o disco **Z:**, por exemplo `Z:\home\voce\Jogos\UFC 4`.
 - **UFC 3 nativo para Linux:** o projeto original do GNSB tem um build Linux de verdade (sem Wine):
   https://github.com/GNSB/UFC-3-PS4-PORT-LINUX-WINDOWS
-- **Estado:** o launcher funciona no Wine. Os ports do UFC 1–4 usam só Vulkan e devem funcionar no
-  Proton, mas isso ainda não foi testado com os jogos.
 - **UFC 5 no Linux é experimental:** o emulador usa APIs de memória do Windows que o Wine 9 não tem
   por completo, e no Wine 9 ele fecha logo ao abrir. Teste com o Proton mais novo (GE-Proton) e
   mande o log.
@@ -136,10 +137,23 @@ bash cage.sh --install   # coloca o Cage Launcher no menu de aplicativos
 - **Intel Arc lento:** ligue o Resizable BAR na BIOS.
 - **Logs:** use o botão **Logs** no Cage Launcher e mande o mais novo junto com o relatório.
 
+## Como compilar
+
+Precisa do [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) (no Windows, rode os mesmos comandos
+do script):
+
+```bash
+(cd src && sh build.sh)               # gera src/CageLauncher.exe
+(cd games/UFC5/src && sh build.sh)    # gera games/UFC5/src/UFC5.exe
+```
+
+Copie o `CageLauncher.exe` para a raiz da pasta do pacote e o `UFC5.exe` para `games\UFC5`.
+O código-fonte dos launchers dos UFC 1–4 não está neste repositório.
+
 ## Código-fonte e licenças
 
 - `CageLauncher.exe` (`src/`) e o launcher do UFC 5 (`games/UFC5/src/`) estão em C/Win32, sob a
-  licença MIT, Copyright (c) 2026 Guilherme Mendes (arquivo `LICENSE`). Para compilar, rode o `build.sh` com o llvm-mingw.
+  licença MIT, Copyright (c) 2026 Guilherme Mendes (arquivo `LICENSE`).
 - Os ports do UFC 1–4 continuam GPL-2.0-or-later, a licença dos projetos em que se baseiam:
   - [SacredFire](https://github.com/T3CHNOLOG1C/SacredFire);
   - [bbport](https://github.com/deadinside28/bloodborne_pc);
@@ -162,7 +176,8 @@ só para identificar os jogos.
 ## English
 
 **Cage Launcher** is a launcher for the PC ports of **EA SPORTS UFC 1, 2, 3, 4 (PS4) and UFC 5 (PS5)**.
-No game files are included: you need your own dump of each game.
+No game files are included: you need your own dump of each game. This repository has the launcher's
+source code and the docs only, not the ports.
 
 - **Best settings for every PC:** on the first start, and whenever the hardware changes, Cage Launcher
   reads the GPU (through Vulkan), CPU threads, RAM and monitor. It then picks resolution, FPS cap,
@@ -179,11 +194,11 @@ No game files are included: you need your own dump of each game.
   - fullscreen at the monitor's resolution;
   - automatic calibration and a one-session full diagnostic.
   The fight is CPU-bound in the emulator: about 30 FPS on a Ryzen 5 5500.
-- **Windows:** extract the zip, run `CageLauncher.exe`, pick a game, Browse to your dump, PLAY.
-- **Linux / Steam Deck:** run `bash cage.sh`. It uses umu-launcher (Proton) if installed,
-  otherwise Wine 9 or newer.
-  - Linux folders show up as drive Z:.
-  - UFC 1–4 should work under Proton, but this is untested with the games.
+- **Windows:** put `CageLauncher.exe` at the root of the package folder (next to `games\`), run it,
+  pick a game, Browse to your dump, PLAY. To build it yourself, see "Como compilar" above (llvm-mingw).
+- **Linux / Steam Deck:** there is no script or package yet. `CageLauncher.exe` is a Windows program;
+  running it through Wine or Proton may work but is untested.
+  - Linux folders show up as drive Z: under Wine.
   - UFC 5 under Wine is experimental: the emulator needs Windows memory APIs that Wine 9 lacks.
   - For a native UFC 3 build, see GNSB's repository.
 

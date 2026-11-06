@@ -12,7 +12,7 @@ PT  Abra o CageLauncher.exe e escolha um jogo na esquerda (UFC 1, 2, 3, 4 ou 5).
       melhores configurações de cada UFC, na primeira vez e quando o hardware muda.
     - Modo Intel Arc automático: avisa se o Resizable BAR estiver desligado e usa as opções certas
       para o Arc.
-    - Linux e Steam Deck: rode  bash cage.sh  (usa o Proton/umu-launcher ou o Wine 9+).
+    - Linux e Steam Deck: ainda não há script; abrir o CageLauncher.exe pelo Wine/Proton não foi testado.
     Mais detalhes no README.md.
 
     No UFC 5:

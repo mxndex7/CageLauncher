@@ -24,5 +24,3 @@ UFC 4 e UFC 5.
   - diagnóstico completo de uma partida;
   - menu de Configurações avançadas;
   - detecção de Intel Arc e aviso de ReBAR.
-- **Linux e Steam Deck:** `cage.sh` roda o Cage Launcher pelo umu-launcher (Proton) ou pelo Wine 9+,
-  e `--install` cria o atalho no menu.
