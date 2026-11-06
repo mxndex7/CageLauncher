@@ -1100,6 +1100,8 @@ static void ToggleSwitch(int idx)
 }
 
 /* ---------------------------------------------------------------- window */
+/* todas as fontes que MakeFonts cria: no WM_DPICHANGED as antigas são apagadas depois de trocadas */
+static HFONT *const g_fonts[] = {&g_fTitle, &g_fCard, &g_fText, &g_fSmall, &g_fSection, &g_fPlay, &g_fBtn, &g_fFoot, &g_fLabel, &g_fTag, &g_fLogo, &g_fLogoSub};
 static void MakeFonts(void)
 {
     #define F(h, w, face) CreateFontW(-SC(h), 0, 0, 0, w, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, face)
@@ -1170,8 +1172,10 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
         InvalidateRect(w, NULL, FALSE); return 0;
     case WM_ACTIVATE: g_down = -1; if (LOWORD(wp) != WA_INACTIVE) { g_kvGame = -1; for (int i = 0; i < NGAMES; i++) ReadVersion(i); InvalidateRect(w, NULL, FALSE); } break;
     case WM_DPICHANGED: {
+        HFONT old[N(g_fonts)]; for (int i = 0; i < N(g_fonts); i++) old[i] = *g_fonts[i];
         g_dpi = HIWORD(wp); MakeFonts();
         SendMessageW(g_editGame, WM_SETFONT, (WPARAM)g_fText, TRUE); SendMessageW(g_editPlayer, WM_SETFONT, (WPARAM)g_fText, TRUE);
+        for (int i = 0; i < N(g_fonts); i++) if (old[i]) DeleteObject(old[i]);   /* só agora: os dois EDIT já usam as novas */
         RECT *r = (RECT *)lp; SetWindowPos(w, NULL, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOZORDER | SWP_NOACTIVATE); return 0;
     }
     case WM_CLOSE: SaveEdits(); DestroyWindow(w); return 0;
