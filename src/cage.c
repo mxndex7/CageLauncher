@@ -318,15 +318,25 @@ static BOOL GameOk(const wchar_t *d)
     FindClose(h); return ok;
 }
 static BOOL PortOk(int g) { wchar_t e[MAX_PATH]; PortExe(g, e); return FileExists(e); }
-static int Status(int g)   /* S_READY, S_PICK, S_NOPORT, S_RUNNING */
+static int StatusDisk(int g)   /* S_READY, S_PICK, S_NOPORT: o que depende do disco */
 {
-    if (g_proc && g_procGame == g) return S_RUNNING;
     if (!PortOk(g)) return S_NOPORT;
     wchar_t p[MAX_PATH]; GetStr(g, L"game", p, MAX_PATH, L"");
     if (G[g].ps5 && !p[0]) {   /* the UFC 5 port finds Desktop\UFC 5 by itself */
         PWSTR dk = NULL; if (SHGetKnownFolderPath(&FOLDERID_Desktop, 0, NULL, &dk) == S_OK) { Join(p, dk, L"UFC 5"); CoTaskMemFree(dk); }
     }
     return GameOk(p) ? S_READY : S_PICK;
+}
+/* o Paint pede o status dos 5 jogos a cada repaint (hover incluso): o resultado do disco vale 2 s,
+   ou até StatusDirty(), chamado depois de toda ação que pode mudar o port ou a pasta do jogo */
+static int g_stCache[NGAMES]; static ULONGLONG g_stTime[NGAMES]; static BOOL g_stValid[NGAMES];
+static void StatusDirty(void) { for (int i = 0; i < NGAMES; i++) g_stValid[i] = FALSE; }
+static int Status(int g)   /* S_READY, S_PICK, S_NOPORT, S_RUNNING */
+{
+    if (g_proc && g_procGame == g) return S_RUNNING;   /* sempre na hora, sem cache */
+    ULONGLONG now = GetTickCount64();
+    if (!g_stValid[g] || now - g_stTime[g] >= 2000) { g_stCache[g] = StatusDisk(g); g_stTime[g] = now; g_stValid[g] = TRUE; }
+    return g_stCache[g];
 }
 
 static void ReadVersion(int g)
@@ -583,11 +593,12 @@ static void SaveEdits(void)
     const wchar_t *pk = G[g_sel].ps5 ? L"user" : L"player";
     GetWindowTextW(g_editPlayer, b, 64); GetStr(g_sel, pk, cur, MAX_PATH, L"");
     if (wcscmp(b, cur)) PutStr(g_sel, pk, b);
+    StatusDirty();   /* a pasta do jogo pode ter mudado; o JOGAR também passa por aqui e decide com o status lido agora */
 }
 static void Select(int g)
 {
     if (g < 0 || g >= NGAMES || g == g_sel) return;
-    SaveEdits(); g_sel = g; g_kvGame = -1; g_msg[0] = 0;
+    SaveEdits(); g_sel = g; g_kvGame = -1; g_msg[0] = 0; StatusDirty();
     WritePrivateProfileStringW(L"CAGE", L"selected_game", G[g].id, g_pIni);
     LoadEdits();
     if (G[g].ps5) { wchar_t last[400]; GetStr(4, GetInt(4, L"calibrate", 0) ? L"calib_status" : L"last_session", last, 400, L"");
@@ -614,7 +625,7 @@ static void Browse(void)
 {
     wchar_t p[MAX_PATH], t[160]; GetWindowTextW(g_editGame, p, MAX_PATH); _snwprintf(t, 160, T(S_PICKGAME), G[g_sel].name);
     if (!PickFolder(p, t)) return;
-    StripSlash(p); SetWindowTextW(g_editGame, p); PutStr(g_sel, L"game", p);
+    StripSlash(p); SetWindowTextW(g_editGame, p); PutStr(g_sel, L"game", p); StatusDirty();
     Msg(GameOk(p) ? C_GOOD : C_ORANGE, L"%s", GameOk(p) ? T(S_READY) : T(S_PICK));
 }
 static void ChangePort(void)
@@ -624,7 +635,7 @@ static void ChangePort(void)
     wchar_t e[MAX_PATH]; Join(e, p, G[g_sel].exe);
     if (!FileExists(e)) { Msg(C_BAD, T(S_NOTFOUND), G[g_sel].exe); return; }
     wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); WritePrivateProfileStringW(L"CAGE", k, p, g_pIni);
-    ReadVersion(g_sel); g_kvGame = -1; LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);
+    ReadVersion(g_sel); g_kvGame = -1; StatusDirty(); LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);
 }
 
 static DWORD WINAPI WaitThread(LPVOID p)
@@ -924,6 +935,7 @@ static DWORD WINAPI AutoCfgThread(void *p)
 
 static BOOL StartPort(int g, BOOL play)
 {
+    StatusDirty();
     if (g == 4 && g_autoProc) WaitForSingleObject(g_autoProc, 15000);   /* never start while it is still writing UFC5.ini */
     wchar_t exe[MAX_PATH], dir[MAX_PATH], cmd[MAX_PATH + 32]; PortExe(g, exe); PortDir(g, dir);
     if (!FileExists(exe)) { Msg(C_BAD, T(S_NOTFOUND), G[g].exe); return FALSE; }
@@ -1152,8 +1164,9 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
         return 0;
     }
     case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); InvalidateRect(w, NULL, FALSE); } else if (HIWORD(wp) == EN_SETFOCUS) InvalidateRect(w, NULL, FALSE); return 0;
-    case WM_APP_EXITED: OnExited((DWORD)wp); return 0;
+    case WM_APP_EXITED: StatusDirty(); OnExited((DWORD)wp); return 0;
     case WM_APP_AUTOCFG:
+        StatusDirty();
         if (wp == 1 || g_autoDone4) {
             wchar_t sum[400]; PcSummary(sum, 400);
             Msg(C_GOOD, g_lang ? L"Best settings picked for this PC (%s%s): %s" : L"Melhores configurações escolhidas para este PC (%s%s): %s",
@@ -1170,7 +1183,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
                             L"O %s travou (a GPU parou de responder). O diagnóstico foi salvo na pasta de logs (%s). Clique em PARAR para fechar.",
             G[wp < NGAMES ? wp : 0].name, PathFindFileNameW(g_frozenFile));
         InvalidateRect(w, NULL, FALSE); return 0;
-    case WM_ACTIVATE: g_down = -1; if (LOWORD(wp) != WA_INACTIVE) { g_kvGame = -1; for (int i = 0; i < NGAMES; i++) ReadVersion(i); InvalidateRect(w, NULL, FALSE); } break;
+    case WM_ACTIVATE: g_down = -1; if (LOWORD(wp) != WA_INACTIVE) { g_kvGame = -1; StatusDirty(); for (int i = 0; i < NGAMES; i++) ReadVersion(i); InvalidateRect(w, NULL, FALSE); } break;
     case WM_DPICHANGED: {
         HFONT old[N(g_fonts)]; for (int i = 0; i < N(g_fonts); i++) old[i] = *g_fonts[i];
         g_dpi = HIWORD(wp); MakeFonts();
