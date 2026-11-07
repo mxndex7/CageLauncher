@@ -222,12 +222,33 @@ static void Msg(COLORREF c, const wchar_t *fmt, ...)
     if (g_wnd) InvalidateRect(g_wnd, NULL, FALSE);
 }
 
-static void PortDir(int g, wchar_t *out)
+static void PortDirDisk(int g, wchar_t *out)   /* lê o cage.ini, sem cache: a que as outras threads usam */
 {
     wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g].id);
     GetPrivateProfileStringW(L"CAGE", k, L"", out, MAX_PATH, g_pIni);
     if (out[0] && DirExists(out)) return;
     wchar_t t[MAX_PATH]; Join(t, g_exeDir, L"games"); Join(out, t, G[g].id);
+}
+/* o Paint lê do disco a cada repaint (hover incluso) o status dos 5 jogos, a pasta do port e as chaves do UFC5.ini.
+   Os três caches valem 2 s contados juntos, para que o disco seja lido numa rodada só por janela de 2 s, ou até
+   StatusDirty(), chamado depois de toda ação que pode mudar o port, a pasta do jogo ou o UFC5.ini.
+   Só a thread da janela usa os caches */
+static ULONGLONG g_cacheTime; static BOOL g_cacheOk;
+static BOOL g_stValid[NGAMES], g_pdValid[NGAMES]; static int g_nk5;
+static void CacheTick(void)
+{
+    ULONGLONG now = GetTickCount64();
+    if (g_cacheOk && now - g_cacheTime < 2000) return;
+    for (int i = 0; i < NGAMES; i++) g_stValid[i] = g_pdValid[i] = FALSE;
+    g_nk5 = 0; g_cacheTime = now; g_cacheOk = TRUE;
+}
+static void StatusDirty(void) { g_cacheOk = FALSE; }
+static wchar_t g_pdCache[NGAMES][MAX_PATH];
+static void PortDir(int g, wchar_t *out)
+{
+    CacheTick();
+    if (!g_pdValid[g]) { PortDirDisk(g, g_pdCache[g]); g_pdValid[g] = TRUE; }
+    wcscpy(out, g_pdCache[g]);
 }
 static void PortExe(int g, wchar_t *out) { wchar_t d[MAX_PATH]; PortDir(g, d); Join(out, d, G[g].exe); }
 
@@ -274,18 +295,38 @@ static KV *SfFind(const wchar_t *k) { for (int i = 0; i < g_nkv; i++) if (!wcscm
 
 /* UFC 5: games\UFC5\UFC5.ini, section [UFC5] */
 static void K5Ini(wchar_t *out) { wchar_t d[MAX_PATH]; PortDir(4, d); Join(out, d, L"UFC5.ini"); }
+/* cada Dropdown/Switch do UFC 5 lê uma chave a cada repaint: o que o GetPrivateProfileStringW devolveu fica no cache
+   (CacheTick) até a próxima gravação. A leitura usa um padrão sentinela para guardar "chave ausente" à parte, e cada
+   chamada aplica o próprio padrão, como antes */
+#define K5MAX 48
+#define K5LEN 512
+typedef struct { wchar_t k[48], v[K5LEN]; BOOL has; } K5;
+static K5 g_k5[K5MAX]; static wchar_t g_k5Ini[MAX_PATH];
+static void K5Get(const wchar_t *k, wchar_t *out, int n, const wchar_t *def)
+{
+    wchar_t ini[MAX_PATH]; K5Ini(ini);   /* K5Ini passa pelo CacheTick */
+    if (wcscmp(ini, g_k5Ini)) { g_nk5 = 0; wcscpy(g_k5Ini, ini); }
+    K5 *e = NULL;
+    for (int i = 0; i < g_nk5; i++) if (!_wcsicmp(g_k5[i].k, k)) { e = &g_k5[i]; break; }
+    if (!e && g_nk5 < K5MAX && wcslen(k) < 48) {
+        e = &g_k5[g_nk5++]; wcscpy(e->k, k);
+        GetPrivateProfileStringW(L"UFC5", k, L"\x01", e->v, K5LEN, ini); e->has = wcscmp(e->v, L"\x01") != 0;
+    }
+    if (!e || n > K5LEN) { GetPrivateProfileStringW(L"UFC5", k, def, out, n, ini); return; }   /* fora do cache: direto */
+    wcsncpy(out, e->has ? e->v : def, n); out[n - 1] = 0;
+}
 
 /* one access layer for both games */
 static void GetStr(int g, const wchar_t *k, wchar_t *out, int n, const wchar_t *def)
 {
-    if (G[g].ps5) { wchar_t ini[MAX_PATH]; K5Ini(ini); GetPrivateProfileStringW(L"UFC5", k, def, out, n, ini); return; }
+    if (G[g].ps5) { K5Get(k, out, n, def); return; }
     if (g_kvGame != g) SfLoad(g);
     KV *kv = SfFind(k); wcsncpy(out, kv ? kv->v : def, n); out[n - 1] = 0;
 }
 static int GetInt(int g, const wchar_t *k, int def) { wchar_t b[32], d[16]; _snwprintf(d, 16, L"%d", def); GetStr(g, k, b, 32, d); return b[0] ? _wtoi(b) : def; }
 static void PutStr(int g, const wchar_t *k, const wchar_t *v)
 {
-    if (G[g].ps5) { wchar_t ini[MAX_PATH]; K5Ini(ini); WritePrivateProfileStringW(L"UFC5", k, v, ini); return; }
+    if (G[g].ps5) { wchar_t ini[MAX_PATH]; K5Ini(ini); WritePrivateProfileStringW(L"UFC5", k, v, ini); g_nk5 = 0; return; }
     if (g_kvGame != g) SfLoad(g);
     KV *kv = SfFind(k);
     if (!kv && g_nkv < MAXL) { kv = &g_kv[g_nkv++]; wcsncpy(kv->k, k, 47); kv->k[47] = 0; }
@@ -327,15 +368,13 @@ static int StatusDisk(int g)   /* S_READY, S_PICK, S_NOPORT: o que depende do di
     }
     return GameOk(p) ? S_READY : S_PICK;
 }
-/* o Paint pede o status dos 5 jogos a cada repaint (hover incluso): o resultado do disco vale 2 s,
-   ou até StatusDirty(), chamado depois de toda ação que pode mudar o port ou a pasta do jogo */
-static int g_stCache[NGAMES]; static ULONGLONG g_stTime[NGAMES]; static BOOL g_stValid[NGAMES];
-static void StatusDirty(void) { for (int i = 0; i < NGAMES; i++) g_stValid[i] = FALSE; }
+/* o status do disco fica no cache (CacheTick) */
+static int g_stCache[NGAMES];
 static int Status(int g)   /* S_READY, S_PICK, S_NOPORT, S_RUNNING */
 {
     if (g_proc && g_procGame == g) return S_RUNNING;   /* sempre na hora, sem cache */
-    ULONGLONG now = GetTickCount64();
-    if (!g_stValid[g] || now - g_stTime[g] >= 2000) { g_stCache[g] = StatusDisk(g); g_stTime[g] = now; g_stValid[g] = TRUE; }
+    CacheTick();
+    if (!g_stValid[g]) { g_stCache[g] = StatusDisk(g); g_stValid[g] = TRUE; }
     return g_stCache[g];
 }
 
@@ -635,7 +674,7 @@ static void ChangePort(void)
     wchar_t e[MAX_PATH]; Join(e, p, G[g_sel].exe);
     if (!FileExists(e)) { Msg(C_BAD, T(S_NOTFOUND), G[g_sel].exe); return; }
     wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); WritePrivateProfileStringW(L"CAGE", k, p, g_pIni);
-    ReadVersion(g_sel); g_kvGame = -1; StatusDirty(); LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);
+    StatusDirty(); ReadVersion(g_sel); g_kvGame = -1; LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);   /* StatusDirty antes: o ReadVersion lê a pasta nova */
 }
 
 static DWORD WINAPI WaitThread(LPVOID p)
@@ -921,7 +960,7 @@ static void PcSummary(wchar_t *out, int n)
 static HANDLE g_autoProc; static int g_autoDone4;
 static DWORD WINAPI AutoCfgThread(void *p)
 {
-    wchar_t exe[MAX_PATH], dir[MAX_PATH], cmd[MAX_PATH + 48]; PortExe(4, exe); PortDir(4, dir);
+    wchar_t exe[MAX_PATH], dir[MAX_PATH], cmd[MAX_PATH + 48]; PortDirDisk(4, dir); Join(exe, dir, G[4].exe);   /* outra thread: sem o cache */
     if (!FileExists(exe)) { PostMessageW(g_wnd, WM_APP_AUTOCFG, 0, 0); return 0; }
     _snwprintf(cmd, MAX_PATH + 48, p ? L"\"%s\" --auto-config --force" : L"\"%s\" --auto-config", exe);
     STARTUPINFOW si = {sizeof(si)}; si.dwFlags = STARTF_USESHOWWINDOW; si.wShowWindow = SW_HIDE; PROCESS_INFORMATION pi = {0};
@@ -970,6 +1009,7 @@ static BOOL StartPort(int g, BOOL play)
         if (G[g].ps5) ShowWindow(g_wnd, SW_MINIMIZE);   /* out of the way: the fullscreen game must stay in front */
     } else CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    StatusDirty();   /* o port iniciado pode gravar o UFC5.ini */
     return TRUE;
 }
 static void Play(void)
