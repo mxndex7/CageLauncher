@@ -251,7 +251,8 @@ static void SfLoad(int g)
         char *e = s; while (*e && *e != '\n') e++;
         char save = *e; *e = 0; char *cr = strchr(s, '\r'); if (cr) *cr = 0;
         char *eq = strchr(s, '=');
-        if (eq && eq != s) { *eq = 0; MultiByteToWideChar(CP_UTF8, 0, s, -1, g_kv[g_nkv].k, 48); MultiByteToWideChar(CP_UTF8, 0, eq + 1, -1, g_kv[g_nkv].v, MAX_PATH); g_nkv++; }
+        if (eq && eq != s) { *eq = 0; MultiByteToWideChar(CP_UTF8, 0, s, -1, g_kv[g_nkv].k, 48); MultiByteToWideChar(CP_UTF8, 0, eq + 1, -1, g_kv[g_nkv].v, MAX_PATH);
+                             g_kv[g_nkv].k[47] = 0; g_kv[g_nkv].v[MAX_PATH - 1] = 0; g_nkv++; }   /* linha maior que o buffer: a conversão falha sem o 0 final */
         *e = save; s = *e ? e + 1 : e;
     }
     HeapFree(GetProcessHeap(), 0, b);
