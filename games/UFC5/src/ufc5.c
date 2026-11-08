@@ -1804,7 +1804,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     if (S.overlay < 0 || S.overlay > 2) S.overlay = 1;
     BOOL first = !S.configured;
     if (first) AutoConfig(FALSE);
-    { wchar_t sig[400]; HwSig(sig, 400); PutStr(L"hw_sig", sig); }
+    BOOL iniOk; { wchar_t sig[400]; HwSig(sig, 400); iniOk = WritePrivateProfileStringW(L"UFC5", L"hw_sig", sig, g_ini); }   /* toda abertura grava: serve de teste */
 
     WNDCLASSEXW wc = {sizeof(wc)}; wc.lpfnWndProc = WndProc; wc.hInstance = inst; wc.lpszClassName = L"CageLauncherUFC5";
     wc.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW); wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1)); wc.hbrBackground = g_brBg;
@@ -1828,6 +1828,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
              if (last[0]) SetStatus(C_SUB, L"Pronto para jogar. Última sessão: %s.", last); else SetStatus(C_SUB, L"Pronto para jogar."); }
     if (!S.game[0]) SetStatus(C_BAD, L"Não achei o UFC 5 na área de trabalho. Clique em Procurar... e escolha a pasta do dump.");
     else if (!S.emu[0]) SetStatus(C_BAD, L"Não achei o motor do jogo (bin\\UFC5-Game.exe). Clique em Procurar... ao lado de Motor do jogo.");
+    if (!iniOk) SetStatus(C_BAD, L"As configurações não serão salvas: o UFC5.ini está somente leitura ou sem permissão de escrita (%s).", g_ini);
 
     /* --play: start straight away (for shortcuts / Cage Launcher) */
     BOOL autoplay = cmdline && wcsstr(cmdline, L"--play");
