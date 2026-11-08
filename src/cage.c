@@ -221,6 +221,15 @@ static void Msg(COLORREF c, const wchar_t *fmt, ...)
     va_list ap; va_start(ap, fmt); _vsnwprintf(g_msg, 512, fmt, ap); va_end(ap); g_msg[511] = 0; g_msgColor = c;
     if (g_wnd) InvalidateRect(g_wnd, NULL, FALSE);
 }
+/* gravação que falhou (ini somente leitura, pasta sem permissão): o aviso sai no fim da ação, por cima das outras mensagens */
+static wchar_t g_saveErr[MAX_PATH];
+static void SaveFailed(const wchar_t *path) { if (!g_saveErr[0]) { wcsncpy(g_saveErr, path, MAX_PATH - 1); g_saveErr[MAX_PATH - 1] = 0; } }
+static void SaveWarn(void)
+{
+    if (!g_saveErr[0]) return;
+    Msg(C_BAD, g_lang ? L"Settings not saved (read-only file or no write permission): %s" : L"Configurações não salvas (arquivo somente leitura ou sem permissão de escrita): %s", g_saveErr);
+    g_saveErr[0] = 0;
+}
 
 static void PortDir(int g, wchar_t *out)
 {
@@ -257,12 +266,12 @@ static void SfLoad(int g)
     }
     HeapFree(GetProcessHeap(), 0, b);
 }
-static void SfSave(void)
+static BOOL SfSave(void)
 {
-    if (g_kvGame < 0) return;
+    if (g_kvGame < 0) return TRUE;
     wchar_t p[MAX_PATH], d[MAX_PATH]; SfPath(g_kvGame, p); wcscpy(d, p); *wcsrchr(d, L'\\') = 0; CreateDirectoryW(d, NULL);
     HANDLE f = CreateFileW(p, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
-    if (f == INVALID_HANDLE_VALUE) return;
+    if (f == INVALID_HANDLE_VALUE) { SaveFailed(p); return FALSE; }
     DWORD w; WriteFile(f, "\xEF\xBB\xBF", 3, &w, NULL);
     for (int i = 0; i < g_nkv; i++) {
         wchar_t line[MAX_PATH + 64]; _snwprintf(line, MAX_PATH + 64, L"%s=%s\r\n", g_kv[i].k, g_kv[i].v);
@@ -270,6 +279,7 @@ static void SfSave(void)
         if (n > 1) WriteFile(f, u, n - 1, &w, NULL);
     }
     CloseHandle(f);
+    return TRUE;
 }
 static KV *SfFind(const wchar_t *k) { for (int i = 0; i < g_nkv; i++) if (!wcscmp(g_kv[i].k, k)) return &g_kv[i]; return NULL; }
 
@@ -286,7 +296,7 @@ static void GetStr(int g, const wchar_t *k, wchar_t *out, int n, const wchar_t *
 static int GetInt(int g, const wchar_t *k, int def) { wchar_t b[32], d[16]; _snwprintf(d, 16, L"%d", def); GetStr(g, k, b, 32, d); return b[0] ? _wtoi(b) : def; }
 static void PutStr(int g, const wchar_t *k, const wchar_t *v)
 {
-    if (G[g].ps5) { wchar_t ini[MAX_PATH]; K5Ini(ini); WritePrivateProfileStringW(L"UFC5", k, v, ini); return; }
+    if (G[g].ps5) { wchar_t ini[MAX_PATH]; K5Ini(ini); if (!WritePrivateProfileStringW(L"UFC5", k, v, ini)) SaveFailed(ini); return; }
     if (g_kvGame != g) SfLoad(g);
     KV *kv = SfFind(k);
     if (!kv && g_nkv < MAXL) { kv = &g_kv[g_nkv++]; wcsncpy(kv->k, k, 47); kv->k[47] = 0; }
@@ -600,7 +610,7 @@ static void Select(int g)
 {
     if (g < 0 || g >= NGAMES || g == g_sel) return;
     SaveEdits(); g_sel = g; g_kvGame = -1; g_msg[0] = 0; StatusDirty();
-    WritePrivateProfileStringW(L"CAGE", L"selected_game", G[g].id, g_pIni);
+    if (!WritePrivateProfileStringW(L"CAGE", L"selected_game", G[g].id, g_pIni)) SaveFailed(g_pIni);
     LoadEdits();
     if (G[g].ps5) { wchar_t last[400]; GetStr(4, GetInt(4, L"calibrate", 0) ? L"calib_status" : L"last_session", last, 400, L"");
                     if (last[0]) Msg(C_SUB, GetInt(4, L"calibrate", 0) ? L"%s" : T(S_SESSION), last); }
@@ -635,7 +645,7 @@ static void ChangePort(void)
     if (!PickFolder(p, t)) return;
     wchar_t e[MAX_PATH]; Join(e, p, G[g_sel].exe);
     if (!FileExists(e)) { Msg(C_BAD, T(S_NOTFOUND), G[g_sel].exe); return; }
-    wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); WritePrivateProfileStringW(L"CAGE", k, p, g_pIni);
+    wchar_t k[32]; _snwprintf(k, 32, L"port_%s", G[g_sel].id); if (!WritePrivateProfileStringW(L"CAGE", k, p, g_pIni)) SaveFailed(g_pIni);
     ReadVersion(g_sel); g_kvGame = -1; StatusDirty(); LoadEdits(); InvalidateRect(g_wnd, NULL, FALSE);
 }
 
@@ -903,7 +913,7 @@ static int AutoConfigAll(BOOL force)
         BOOL had = FileExists(sf);
         if (!force && !wcscmp(old, sig)) continue;
         if (force || !had || old[0]) { g_kvGame = -1; AutoConfig4(g); done++; }
-        WritePrivateProfileStringW(L"CAGE", k, sig, g_pIni);
+        if (!WritePrivateProfileStringW(L"CAGE", k, sig, g_pIni)) SaveFailed(g_pIni);
     }
     g_kvGame = -1;
     return done;
@@ -1161,11 +1171,12 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
             case H_LOGS: OpenLogs(); break;
             case H_PLAY: Play(); break;
             case H_ABOUT: About(); break;
-            case H_EN: case H_PT: g_lang = h == H_EN; WritePrivateProfileStringW(L"CAGE", L"language", g_lang ? L"0" : L"1", g_pIni); g_msg[0] = 0; InvalidateRect(w, NULL, FALSE); break;
+            case H_EN: case H_PT: g_lang = h == H_EN; g_msg[0] = 0; if (!WritePrivateProfileStringW(L"CAGE", L"language", g_lang ? L"0" : L"1", g_pIni)) SaveFailed(g_pIni); InvalidateRect(w, NULL, FALSE); break;
         }
+        SaveWarn();
         return 0;
     }
-    case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); InvalidateRect(w, NULL, FALSE); } else if (HIWORD(wp) == EN_SETFOCUS) InvalidateRect(w, NULL, FALSE); return 0;
+    case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); SaveWarn(); InvalidateRect(w, NULL, FALSE); } else if (HIWORD(wp) == EN_SETFOCUS) InvalidateRect(w, NULL, FALSE); return 0;
     case WM_APP_EXITED: StatusDirty(); OnExited((DWORD)wp); return 0;
     case WM_APP_AUTOCFG:
         if (lp) { InterlockedCompareExchangePointer((PVOID volatile *)&g_autoProc, NULL, (PVOID)lp); CloseHandle((HANDLE)lp); }
@@ -1259,7 +1270,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     LoadEdits();
     if (G[g_sel].ps5) { wchar_t last[200]; GetStr(4, L"last_session", last, 200, L""); if (last[0]) Msg(C_SUB, T(S_SESSION), last); }
     ShowWindow(w, show); UpdateWindow(w);
-    DetectPc(); g_autoDone4 = AutoConfigAll(FALSE);
+    DetectPc(); g_autoDone4 = AutoConfigAll(FALSE); SaveWarn();
     { HANDLE th = CreateThread(NULL, 0, AutoCfgThread, NULL, 0, NULL); if (th) CloseHandle(th); }
 
     MSG msg;
