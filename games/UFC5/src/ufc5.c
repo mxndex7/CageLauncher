@@ -1502,8 +1502,9 @@ static void SampleFps(void)
         if (g_gameWnd) {   /* the game window gets the focus (a fullscreen game left behind another window can stay black) */
             SetForegroundWindow(g_gameWnd);
             /* give the game window the UFC 5 icon in the taskbar and Alt+Tab */
-            HICON big = (HICON)LoadImageW(g_inst, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
-            HICON sm = (HICON)LoadImageW(g_inst, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
+            static HICON big, sm;   /* carregados uma vez: a janela do jogo pode ser recriada e cada sessão acha a dela */
+            if (!big) big = (HICON)LoadImageW(g_inst, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
+            if (!sm) sm = (HICON)LoadImageW(g_inst, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
             if (big) SendMessageTimeoutW(g_gameWnd, WM_SETICON, ICON_BIG, (LPARAM)big, SMTO_ABORTIFHUNG, 200, NULL);
             if (sm) SendMessageTimeoutW(g_gameWnd, WM_SETICON, ICON_SMALL, (LPARAM)sm, SMTO_ABORTIFHUNG, 200, NULL);
         }
