@@ -930,7 +930,7 @@ static DWORD WINAPI AutoCfgThread(void *p)
     CloseHandle(pi.hThread); g_autoProc = pi.hProcess;
     DWORD code = 0;
     if (WaitForSingleObject(pi.hProcess, 30000) == WAIT_OBJECT_0) GetExitCodeProcess(pi.hProcess, &code);
-    PostMessageW(g_wnd, WM_APP_AUTOCFG, code, 0);
+    PostMessageW(g_wnd, WM_APP_AUTOCFG, code, (LPARAM)pi.hProcess);   /* a thread da janela fecha o handle: só ela espera nele (StartPort) */
     return 0;
 }
 
@@ -1167,6 +1167,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
     case WM_COMMAND: if (HIWORD(wp) == EN_KILLFOCUS) { SaveEdits(); InvalidateRect(w, NULL, FALSE); } else if (HIWORD(wp) == EN_SETFOCUS) InvalidateRect(w, NULL, FALSE); return 0;
     case WM_APP_EXITED: StatusDirty(); OnExited((DWORD)wp); return 0;
     case WM_APP_AUTOCFG:
+        if (lp) { InterlockedCompareExchangePointer((PVOID volatile *)&g_autoProc, NULL, (PVOID)lp); CloseHandle((HANDLE)lp); }
         StatusDirty();
         if (wp == 1 || g_autoDone4) {
             wchar_t sum[400]; PcSummary(sum, 400);
