@@ -1143,6 +1143,7 @@ static LRESULT CALLBACK WndProc(HWND w, UINT m, WPARAM wp, LPARAM lp)
     case WM_EXITMENULOOP: if (g_menuOpen != -1) { g_menuOpen = -1; InvalidateRect(w, NULL, FALSE); } break;
     case WM_SETCURSOR: if (LOWORD(lp) == HTCLIENT && g_hot >= 0) { SetCursor(LoadCursorW(NULL, (LPCWSTR)IDC_HAND)); return TRUE; } break;
     case WM_LBUTTONDOWN: {
+        if (IsIconic(w)) return 0;   /* clique que ficou na fila enquanto o JOGAR iniciava o port: a janela já foi minimizada */
         SetFocus(w);
         int h = HitAt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
         if (h == H_PLAY) { g_down = H_PLAY; g_downStop = g_proc != NULL; InvalidateRect(w, NULL, FALSE); UpdateWindow(w); }   /* desenho pressionado até soltar o botão */
