@@ -1222,6 +1222,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmdline, int show)
     DarkMenus();
 
     GetModuleFileNameW(NULL, g_exeDir, MAX_PATH); wchar_t *s = wcsrchr(g_exeDir, L'\\'); if (s) *s = 0;
+    wchar_t lav[2]; if (!GetEnvironmentVariableW(L"LOCALAPPDATA", lav, 2)) {   /* variável ausente ou vazia: a pasta do Windows, também para os ports */
+        PWSTR k = NULL; if (SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &k) == S_OK) { SetEnvironmentVariableW(L"LOCALAPPDATA", k); CoTaskMemFree(k); }
+    }
     { wchar_t la[MAX_PATH] = L"", d[MAX_PATH]; GetEnvironmentVariableW(L"LOCALAPPDATA", la, MAX_PATH); Join(d, la, L"CageLauncher"); CreateDirectoryW(d, NULL); Join(g_pIni, d, L"cage.ini"); }
     g_lang = GetPrivateProfileIntW(L"CAGE", L"language", 1, g_pIni) ? 0 : 1;   /* language=1 is PT-BR */
     wchar_t selId[16]; GetPrivateProfileStringW(L"CAGE", L"selected_game", L"UFC5", selId, 16, g_pIni);
