@@ -813,7 +813,7 @@ static BOOL PickFolder(wchar_t *path)
     if (path[0]) { IShellItem *si; if (SUCCEEDED(SHCreateItemFromParsingName(path, NULL, &IID_IShellItem, (void **)&si))) { d->lpVtbl->SetFolder(d, si); si->lpVtbl->Release(si); } }
     if (SUCCEEDED(d->lpVtbl->Show(d, g_wnd))) {
         IShellItem *it; if (SUCCEEDED(d->lpVtbl->GetResult(d, &it))) {
-            PWSTR p; if (SUCCEEDED(it->lpVtbl->GetDisplayName(it, SIGDN_FILESYSPATH, &p))) { wcsncpy(path, p, MAX_PATH); CoTaskMemFree(p); ok = TRUE; }
+            PWSTR p; if (SUCCEEDED(it->lpVtbl->GetDisplayName(it, SIGDN_FILESYSPATH, &p))) { wcsncpy(path, p, MAX_PATH); path[MAX_PATH - 1] = 0; CoTaskMemFree(p); ok = TRUE; }   /* caminho longo: wcsncpy não termina */
             it->lpVtbl->Release(it);
         }
     }
