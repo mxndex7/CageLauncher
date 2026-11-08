@@ -996,7 +996,10 @@ static void Play(void)
                 CloseHandle(sn);
             }
         }
-        for (int i = nk - 1; i >= 0; i--) { HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, kids[i]); if (h) { TerminateProcess(h, 1); CloseHandle(h); } }
+        /* UFC 5: o UFC5.exe fica por último e fecha sozinho quando o motor fecha, devolvendo o plano de energia do Windows */
+        BOOL soft = g_procGame >= 0 && G[g_procGame].ps5 && nk > 1;
+        for (int i = nk - 1; i >= (soft ? 1 : 0); i--) { HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, kids[i]); if (h) { TerminateProcess(h, 1); CloseHandle(h); } }
+        if (soft && WaitForSingleObject(g_proc, 5000) != WAIT_OBJECT_0) TerminateProcess(g_proc, 1);
         return;
     }
     SaveEdits();
